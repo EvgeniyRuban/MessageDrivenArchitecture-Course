@@ -1,4 +1,4 @@
-﻿namespace RestaurantApp;
+﻿namespace Restaurant.Notification;
 
 public sealed class ClientNotifier
 {
