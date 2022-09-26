@@ -1,7 +1,6 @@
-﻿using RestaurantApp;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 
-namespace RestrauntApp;
+namespace Restaurant.Booking;
 
 public class Program
 {
@@ -119,8 +118,8 @@ public class Program
     /// Handling user input for <paramref name = "operations"/> by using operation index.
     /// </summary>
     private static void HandleUserInput(
-        List<string> operations, 
-        out int input, 
+        List<string> operations,
+        out int input,
         bool untilCorrectInput = default)
     {
         PrintOperations(operations);

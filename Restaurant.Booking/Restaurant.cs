@@ -1,4 +1,6 @@
-﻿namespace RestaurantApp;
+﻿using Restaurant.Notification;
+
+namespace Restaurant.Booking;
 
 public sealed class Restaurant
 {
