@@ -9,7 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Restaurant.Notification\Restaurant.Notification.csproj" />
+    <ProjectReference Include="..\Messaging\Messaging.csproj" />
   </ItemGroup>
 
 </Project>
