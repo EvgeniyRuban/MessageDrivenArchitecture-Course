@@ -18,8 +18,8 @@ public sealed class Restaurant
             HostName = "shrimp-01.rmq.cloudamqp.com",
             VirtualHost = "sfbzerjl",
             QueueName = "BookingNotification",
-            RoutingKey = "BookingNotification",
-            ExchangeName = "direct_exchange",
+            RoutingKey = String.Empty,
+            Exchange = "fanout_exchange",
             Port = 5672,
         });
 

@@ -22,11 +22,11 @@ public sealed class Consumer : IDisposable
             VirtualHost = config.VirtualHost ?? throw new ArgumentNullException(config.VirtualHost, nameof(config.VirtualHost)),
             QueueName = config.QueueName ?? throw new ArgumentNullException(config.QueueName, nameof(config.QueueName)),
             RoutingKey = config.RoutingKey ?? throw new ArgumentNullException(config.RoutingKey, nameof(config.RoutingKey)),
-            ExchangeName = config.ExchangeName ?? throw new ArgumentNullException(config.ExchangeName, nameof(config.ExchangeName)),
+            Exchange = config.Exchange ?? throw new ArgumentNullException(config.Exchange, nameof(config.Exchange)),
             Port = config.Port,
         };
 
-        var factory = new ConnectionFactory()
+        var factory = new ConnectionFactory
         {
             UserName = _config.UserName,
             HostName = _config.HostName,
@@ -41,20 +41,16 @@ public sealed class Consumer : IDisposable
 
     public void Receive(EventHandler<BasicDeliverEventArgs> receiveCallBack)
     {
-        _channel.QueueDeclare(queue: _config.QueueName,
-                              durable: false,
-                              exclusive: false,
-                              autoDelete: false,
-                              arguments: null);
+        var queueName = _channel.QueueDeclare().QueueName;
 
-        _channel.QueueBind(queue: _config.QueueName,
-                           exchange: _config.ExchangeName,
+        _channel.QueueBind(queue: queueName,
+                           exchange: _config.Exchange,
                            routingKey: _config.RoutingKey);
 
         var consumer = new EventingBasicConsumer(_channel);
         consumer.Received += receiveCallBack;
 
-        _channel.BasicConsume(queue: _config.QueueName,
+        _channel.BasicConsume(queue: queueName,
                               autoAck: true,
                               consumer: consumer);
     }

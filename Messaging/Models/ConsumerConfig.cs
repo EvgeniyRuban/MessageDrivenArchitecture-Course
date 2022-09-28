@@ -9,5 +9,5 @@ public sealed class ConsumerConfig
     public int Port { get; set; }
     public string QueueName { get; set; } = null!;
     public string RoutingKey { get; set; } = null!;
-    public string ExchangeName { get; set; } = null!;
+    public string Exchange { get; set; } = null!;
 }
