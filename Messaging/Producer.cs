@@ -18,7 +18,7 @@ public sealed class Producer
             VirtualHost = config.VirtualHost ?? throw new ArgumentNullException(config.VirtualHost, nameof(config.VirtualHost)),
             QueueName = config.QueueName ?? throw new ArgumentNullException(config.QueueName, nameof(config.QueueName)),
             RoutingKey = config.RoutingKey ?? throw new ArgumentNullException(config.RoutingKey, nameof(config.RoutingKey)),
-            ExchangeName = config.ExchangeName ?? throw new ArgumentNullException(config.ExchangeName, nameof(config.ExchangeName)),
+            Exchange = config.Exchange ?? throw new ArgumentNullException(config.Exchange, nameof(config.Exchange)),
             Port = config.Port,
         };
     }
@@ -37,15 +37,15 @@ public sealed class Producer
         using var connection = factory.CreateConnection();
         using var channel = connection.CreateModel();
 
-        channel.ExchangeDeclare(exchange: _config.ExchangeName,
-                                type: ExchangeType.Direct,
+        channel.ExchangeDeclare(exchange: _config.Exchange,
+                                type: ExchangeType.Fanout,
                                 durable: false,
                                 autoDelete: false,
                                 arguments: null);
 
         var body = Encoding.UTF8.GetBytes(message);
 
-        channel.BasicPublish(exchange: _config.ExchangeName,
+        channel.BasicPublish(exchange: _config.Exchange,
                              routingKey: _config.RoutingKey,
                              basicProperties: null,
                              body: body);
