@@ -1,17 +1,28 @@
-﻿using Restaurant.Notification;
+﻿using Messaging;
 
 namespace Restaurant.Booking;
 
 public sealed class Restaurant
 {
     private readonly List<Table> _tables;
-    private readonly ClientNotifier _notifier;
+    private readonly Producer _producer;
     private readonly object _syncObj = new object();
     private readonly TimeSpan _syncOperationDelay = TimeSpan.FromSeconds(5);
 
     public Restaurant()
     {
-        _notifier = new ClientNotifier();
+        _producer = new (new ProducerConfig()
+        {
+            UserName = "sfbzerjl",
+            Password = "7sdVW8O46lm2XW98UUt1-V3Ia2VjMkry",
+            HostName = "shrimp-01.rmq.cloudamqp.com",
+            VirtualHost = "sfbzerjl",
+            QueueName = "BookingNotification",
+            RoutingKey = "BookingNotification",
+            ExchangeName = "direct_exchange",
+            Port = 5672,
+        });
+
         _tables = GetRandomTables(10);
     }
 
@@ -58,7 +69,7 @@ public sealed class Restaurant
 
                 table.SetState(TableState.Booked);
 
-                _notifier.SendAsync($"Готово! Ваш столик номер {table.Id}");
+                _producer.Send($"Готово! Ваш столик номер {table.Id}");
             }
         });
     }
@@ -101,19 +112,19 @@ public sealed class Restaurant
 
                 if (table is null)
                 {
-                    _notifier.SendAsync($"У нас нет стола с номером {id}.");
+                    _producer.Send($"У нас нет стола с номером {id}.");
                     return;
                 }
                 else if (table.State == TableState.Free)
                 {
-                    _notifier.SendAsync($"Стол с номером {id}, не занят.");
+                    _producer.Send($"Стол с номером {id}, не занят.");
                     return;
                 }
 
                 table?.SetState(TableState.Free);
             }
 
-            _notifier.SendAsync($"Бронь {id} стола снята.");
+            _producer.Send($"Бронь {id} стола снята.");
         });
     }
     private List<Table> GetRandomTables(int count)

@@ -5,7 +5,8 @@ VisualStudioVersion = 17.0.32014.148
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tasks", "tasks", "{3589FE9D-C7BB-4E19-9539-7FD35DED376C}"
 	ProjectSection(SolutionItems) = preProject
-		task-1.txt = task-1.txt
+		tasks\task-1.txt = tasks\task-1.txt
+		tasks\task-2.txt = tasks\task-2.txt
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Messaging", "Messaging\Messaging.csproj", "{F94DCBE1-162B-40F4-A137-E2A2082CD346}"
