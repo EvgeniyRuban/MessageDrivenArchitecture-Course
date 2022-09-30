@@ -6,7 +6,7 @@ public sealed class Restaurant
 {
     private readonly List<Table> _tables;
     private readonly Producer _producer;
-    private readonly object _syncObj = new object();
+    private readonly object _syncObj = new ();
     private readonly TimeSpan _syncOperationDelay = TimeSpan.FromSeconds(5);
 
     public Restaurant()
