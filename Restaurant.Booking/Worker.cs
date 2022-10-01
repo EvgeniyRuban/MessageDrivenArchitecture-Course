@@ -27,7 +27,7 @@ namespace Restaurant.Booking
                 await Task.Delay(10_000, stoppingToken);
                 Console.WriteLine("Привет, желаете забронировать столик?");
                 await _restaurant.BookTableAsync(1);
-                await _bus.Publish(new TableBooked(Guid.NewGuid(), Guid.NewGuid(), false), stoppingToken);
+                await _bus.Publish<TableBooked>(new (Guid.NewGuid(), Guid.NewGuid(), false), stoppingToken);
             }
         }
     }

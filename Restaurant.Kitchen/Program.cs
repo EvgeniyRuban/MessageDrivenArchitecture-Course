@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Configuration;
 using MassTransit;
 using Restaurant.Kitchen.Consumers;
 
@@ -9,34 +10,54 @@ public class Program
 {
     public static void Main(string[] args)
     {
+        Console.OutputEncoding = System.Text.Encoding.UTF8;
+        Console.Title = GetConfigurationSection<AppSettings>()
+            [$"{nameof(AppSettings)}:{AppSettingsDefinition.ConsoleTitle}"];
+
         CreateHostBuilder(args).Build().Run();
     }
 
-    public static IHostBuilder CreateHostBuilder(string[] args) =>
-            Host.CreateDefaultBuilder(args)
-                .ConfigureServices((hostContext, services) =>
+    public static IHostBuilder CreateHostBuilder(string[] args)
+    {
+        var config = GetConfigurationSection<RabbitMQHostConfig>();
+
+        var builder =
+        Host.CreateDefaultBuilder(args)
+            .ConfigureServices((hostContext, services) =>
+            {
+                services.AddMassTransit(x =>
                 {
-                    services.AddMassTransit(x =>
+                    x.AddConsumer<KitchenTableBookedConsumer>();
+
+                    x.UsingRabbitMq((context, cfg) =>
                     {
-                        x.AddConsumer<KitchenTableBookedConsumer>();
-
-                        x.UsingRabbitMq((context, cfg) =>
-                        {
-                            cfg.Host("shrimp-01.rmq.cloudamqp.com", "sfbzerjl",
-                                settings =>
-                                {
-                                    settings.Username("sfbzerjl");
-                                    settings.Password("7sdVW8O46lm2XW98UUt1-V3Ia2VjMkry");
-                                });
-                        });
-                    });
-
-                    services.AddSingleton<Manager>();
-
-                    services.AddOptions<MassTransitHostOptions>()
-                    .Configure(options =>
-                    {
-                        options.WaitUntilStarted = true;
+                        cfg.Host(
+                            host: config[$"{nameof(RabbitMQHostConfig)}:{RabbitMQHostConfigDefinition.HostName}"],
+                            virtualHost: config[$"{nameof(RabbitMQHostConfig)}:{RabbitMQHostConfigDefinition.VirtualHost}"],
+                            hostSettings =>
+                            {
+                                hostSettings.Username(config[$"{nameof(RabbitMQHostConfig)}:{RabbitMQHostConfigDefinition.UserName}"]);
+                                hostSettings.Password(config[$"{nameof(RabbitMQHostConfig)}:{RabbitMQHostConfigDefinition.Password}"]);
+                            });
                     });
                 });
+
+                services.AddSingleton<Manager>();
+
+                services.AddOptions<MassTransitHostOptions>()
+                .Configure(options =>
+                {
+                    options.WaitUntilStarted = true;
+                });
+            });
+
+        return builder;
+    }
+
+    public static IConfigurationRoot? GetConfigurationSection<T>() where T : class
+        => new ConfigurationBuilder()
+                .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
+                .AddJsonFile("appsettings.json")
+                .AddUserSecrets<T>()
+                .Build();
 }
