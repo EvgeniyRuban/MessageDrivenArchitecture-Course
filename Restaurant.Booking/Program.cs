@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Configuration;
 using MassTransit;
 
 namespace Restaurant.Booking;
@@ -9,10 +10,17 @@ public class Program
     public static void Main(string[] args)
     {
         Console.OutputEncoding = System.Text.Encoding.UTF8;
+        Console.Title = GetConfigurationSection<AppSettings>()
+            [$"{nameof(AppSettings)}:{AppSettingsDefinition.ConsoleTitle}"];
+
         CreateHostBuilder(args).Build().Run();
     }
 
-    public static IHostBuilder CreateHostBuilder(string[] args) =>
+    public static IHostBuilder CreateHostBuilder(string[] args)
+    {
+        var config = GetConfigurationSection<RabbitMQHostConfig>();
+
+        var builder = 
         Host.CreateDefaultBuilder(args)
             .ConfigureServices((context, services) =>
             {
@@ -20,11 +28,13 @@ public class Program
                 {
                     x.UsingRabbitMq((context, cfg) =>
                     {
-                        cfg.Host("shrimp-01.rmq.cloudamqp.com", "sfbzerjl",
-                            settings =>
+                        cfg.Host(
+                            host: config[$"{nameof(RabbitMQHostConfig)}:{RabbitMQHostConfigDefinition.HostName}"],
+                            virtualHost: config[$"{nameof(RabbitMQHostConfig)}:{RabbitMQHostConfigDefinition.VirtualHost}"],
+                            hostSettings =>
                             {
-                                settings.Username("sfbzerjl");
-                                settings.Password("7sdVW8O46lm2XW98UUt1-V3Ia2VjMkry");
+                                hostSettings.Username(config[$"{nameof(RabbitMQHostConfig)}:{RabbitMQHostConfigDefinition.UserName}"]);
+                                hostSettings.Password(config[$"{nameof(RabbitMQHostConfig)}:{RabbitMQHostConfigDefinition.Password}"]);
                             });
                     });
                 });
@@ -39,4 +49,14 @@ public class Program
 
                 services.AddHostedService<Worker>();
             });
+
+        return builder;
+    }
+
+    public static IConfigurationRoot? GetConfigurationSection<T>() where T : class
+        => new ConfigurationBuilder()
+                .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
+                .AddJsonFile("appsettings.json")
+                .AddUserSecrets<T>()
+                .Build();
 }
