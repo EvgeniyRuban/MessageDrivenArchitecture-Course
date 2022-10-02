@@ -1,130 +1,121 @@
-﻿using Messaging;
-
-namespace Restaurant.Booking;
+﻿namespace Restaurant.Booking;
 
 public sealed class Restaurant
 {
-    private readonly List<Table> _tables;
-    private readonly Producer _producer;
-    private readonly object _syncObj = new ();
+    private readonly IList<Table> _tables;
     private readonly TimeSpan _syncOperationDelay = TimeSpan.FromSeconds(5);
 
     public Restaurant()
     {
-        _producer = new (new ProducerConfig()
-        {
-            UserName = "sfbzerjl",
-            Password = "7sdVW8O46lm2XW98UUt1-V3Ia2VjMkry",
-            HostName = "shrimp-01.rmq.cloudamqp.com",
-            VirtualHost = "sfbzerjl",
-            QueueName = "BookingNotification",
-            RoutingKey = String.Empty,
-            Exchange = "fanout_exchange",
-            Port = 5672,
-        });
-
         _tables = GetRandomTables(10);
     }
 
-    public void BookTable(int numberOfSeats)
+    /// <summary>
+    /// The table booking.
+    /// </summary>
+    /// <param name="numberOfSeats"></param>
+    /// <returns> 
+    /// Returns a table id, if restaurant contains table with current <paramref name = "numberOfSeats"/>, otherwise null.
+    /// </returns>
+    public int? BookTable(int numberOfSeats)
     {
-        Table table = null!;
-        Console.WriteLine("Подождите секунду я подберу столик и подтвержу вашу бронь, оставайтесь на линии.");
+        Table? table = null;
 
-        lock (_syncObj)
-        {
-            table = _tables.FirstOrDefault(t =>
-                                               t.SeatsCount >= numberOfSeats &&
-                                               t.State == TableState.Free);
-        }
+        table = _tables.FirstOrDefault(t =>
+                                           t.SeatsCount >= numberOfSeats &&
+                                           t.State == TableState.Free);
 
         Task.Delay(_syncOperationDelay).Wait();
 
-        lock (_syncObj)
+        if (table is null)
         {
+            return null;
+        }
+
+        table.SetState(TableState.Booked);
+
+        return table.Id;
+    }
+    /// <summary>
+    /// The table booking asynchronously.
+    /// </summary>
+    /// <param name="numberOfSeats"></param>
+    /// <returns> 
+    /// Returns a table id, if restaurant contains table with current <paramref name = "numberOfSeats"/>, otherwise null.
+    /// </returns>
+    public async Task<int?> BookTableAsync(int numberOfSeats)
+    {
+        return await Task.Run<int?>(() =>
+        {
+            var table = _tables.FirstOrDefault(t =>
+                                           t.SeatsCount >= numberOfSeats &&
+                                           t.State == TableState.Free);
+
             if (table is null)
             {
-                Console.WriteLine("К сожалению, сейчас все столики заняты.");
-                return;
+                return null;
             }
 
             table.SetState(TableState.Booked);
-            Console.WriteLine($"Готово! Ваш столик номер {table.Id}");
-        }
-    }
-    public async Task BookTableAsync(int numberOfSeats)
-    {
-        Task.Run(async () =>
-        {
-            lock (_syncObj)
-            {
-                var table = _tables.FirstOrDefault(t =>
-                                               t.SeatsCount >= numberOfSeats &&
-                                               t.State == TableState.Free);
-                if (table is null)
-                {
-                    Console.WriteLine("К сожалению, сейчас все столики заняты.");
-                    return;
-                }
 
-                table.SetState(TableState.Booked);
-
-                _producer.Send($"Готово! Ваш столик номер {table.Id}");
-            }
+            return table.Id;
         });
     }
-    public void UnbookTable(int id)
+    /// <summary>
+    /// The table unbooking.
+    /// </summary>
+    /// <param name="id">Table id.</param>
+    /// <returns>
+    /// Returns true if unbooking operation completed succesfully, if table with current <paramref name="id"/>
+    /// is free, returns false, otherwise null (table with current <paramref name="id"/> doesn't exists).
+    /// </returns>
+    public bool? UnbookTable(int id)
     {
-        Table table = null!;
+        Table? table = null;
 
-        lock (_syncObj)
-        {
-            table = _tables.FirstOrDefault(t => t.Id == id);
-        }
+        table = _tables.FirstOrDefault(t => t.Id == id);
 
         Task.Delay(_syncOperationDelay).Wait();
 
-        lock (_syncObj)
+        if (table is null)
         {
+            return null;
+        }
+        else if (table.State == TableState.Free)
+        {
+            return false;
+        }
+
+        table?.SetState(TableState.Free);
+
+        return true;
+    }
+    /// <summary>
+    /// The table unbooking asynchronously.
+    /// </summary>
+    /// <param name="id">Table id.</param>
+    /// <returns>
+    /// Returns true if unbooking operation completed succesfully, if table with current <paramref name="id"/>
+    /// is free, returns false, otherwise null (table with current <paramref name="id"/> doesn't exists).
+    /// </returns>
+    public async Task<bool?> UnbookTableAsync(int id)
+    {
+        return await Task.Run<bool?>(() =>
+        {
+            var table = _tables.FirstOrDefault(t => t.Id == id);
+
             if (table is null)
             {
-                Console.WriteLine($"У нас нет стола с номером {id}.");
-                return;
+                return null;
             }
             else if (table.State == TableState.Free)
             {
-                Console.WriteLine($"Стол с номером {id}, не занят.");
-                return;
+                return false;
             }
 
             table?.SetState(TableState.Free);
-        }
 
-        Console.WriteLine($"Бронь {id} стола снята.");
-    }
-    public async Task UnbookTableAsync(int id)
-    {
-        Task.Run(async () =>
-        {
-            lock (_syncObj)
-            {
-                var table = _tables.FirstOrDefault(t => t.Id == id);
-
-                if (table is null)
-                {
-                    _producer.Send($"У нас нет стола с номером {id}.");
-                    return;
-                }
-                else if (table.State == TableState.Free)
-                {
-                    _producer.Send($"Стол с номером {id}, не занят.");
-                    return;
-                }
-
-                table?.SetState(TableState.Free);
-            }
-
-            _producer.Send($"Бронь {id} стола снята.");
+            return true;
         });
     }
     private List<Table> GetRandomTables(int count)
@@ -133,23 +124,21 @@ public sealed class Restaurant
         var rnd = new Random();
         NumberOfSeats[] arr =
         {
-            NumberOfSeats.Single,
-            NumberOfSeats.Double,
-            NumberOfSeats.Four,
-            NumberOfSeats.Six,
-            NumberOfSeats.Eight,
-            NumberOfSeats.Ten,
-            NumberOfSeats.Twelve,
-        };
+                NumberOfSeats.Single,
+                NumberOfSeats.Double,
+                NumberOfSeats.Four,
+                NumberOfSeats.Six,
+                NumberOfSeats.Eight,
+                NumberOfSeats.Ten,
+                NumberOfSeats.Twelve,
+            };
 
         for (int i = 0; i < count; i++)
         {
             tables.Add(
-                new
-                (
-                    i + 1,
-                    (int)arr[rnd.Next(arr.Length)]
-                ));
+                new(
+                   i + 1,
+                   (int)arr[rnd.Next(arr.Length)]));
         }
 
         return tables;

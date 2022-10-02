@@ -14,7 +14,7 @@ public sealed class NotifierTableBookedConsumer : IConsumer<ITableBooked>
 
     public Task Consume(ConsumeContext<ITableBooked> context)
     {
-        var result = context.Message.Succes;
+        var result = context.Message.IsSucces;
 
         _notifier.Accept(context.Message.OrderId,
                          result ? Accepted.Booking : Accepted.Rejected,

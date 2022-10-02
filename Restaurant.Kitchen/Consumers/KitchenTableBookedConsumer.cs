@@ -16,7 +16,7 @@ public sealed class KitchenTableBookedConsumer : IConsumer<ITableBooked>
 
     public Task Consume(ConsumeContext<ITableBooked> context)
     {
-        var result = context.Message.Succes;
+        var result = context.Message.IsSucces;
 
         if (result)
         {
