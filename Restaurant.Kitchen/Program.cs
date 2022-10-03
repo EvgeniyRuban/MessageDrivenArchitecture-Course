@@ -39,10 +39,14 @@ public class Program
                                 hostSettings.Username(config[$"{nameof(RabbitMQHostConfig)}:{RabbitMQHostConfigDefinition.UserName}"]);
                                 hostSettings.Password(config[$"{nameof(RabbitMQHostConfig)}:{RabbitMQHostConfigDefinition.Password}"]);
                             });
+
+                        cfg.ConfigureEndpoints(context);
                     });
                 });
 
-                services.AddSingleton<Manager>();
+                services.AddSingleton<Kitchen>();
+
+                services.AddHostedService<KitchenBreakerBackgroundService>();
 
                 services.AddOptions<MassTransitHostOptions>()
                 .Configure(options =>

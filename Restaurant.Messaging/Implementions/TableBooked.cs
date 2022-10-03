@@ -2,7 +2,7 @@
 
 public class TableBooked : ITableBooked
 {
-    public TableBooked(Guid orderId, Guid clientId, bool isSucces, Dish? preOrder = null)
+    public TableBooked(Guid orderId, Guid clientId, bool isSucces, Dish[]? preOrder = null)
     {
         OrderId = orderId;
         ClientId = clientId;
@@ -12,6 +12,6 @@ public class TableBooked : ITableBooked
 
     public Guid OrderId { get; }
     public Guid ClientId { get; }
-    public Dish? PreOrder { get; }
+    public Dish[]? PreOrder { get; }
     public bool IsSucces { get; }
 }

@@ -5,13 +5,13 @@ namespace Restaurant.Kitchen.Consumers;
 
 public sealed class KitchenTableBookedConsumer : IConsumer<ITableBooked>
 {
-    private readonly Manager _manager;
+    private readonly Kitchen _kitchen;
 
-    public KitchenTableBookedConsumer(Manager manager)
+    public KitchenTableBookedConsumer(Kitchen kitchen)
     {
-        ArgumentNullException.ThrowIfNull(manager, nameof(manager));
+        ArgumentNullException.ThrowIfNull(kitchen, nameof(kitchen));
 
-        _manager = manager;
+        _kitchen = kitchen;
     }
 
     public Task Consume(ConsumeContext<ITableBooked> context)
@@ -20,7 +20,7 @@ public sealed class KitchenTableBookedConsumer : IConsumer<ITableBooked>
 
         if (result)
         {
-            _manager.CheckKitchenReady(context.Message.OrderId, context.Message.PreOrder);
+            _kitchen.CheckKitchenReady(context.Message.OrderId, context.Message.PreOrder);
         }
 
         return context.ConsumeCompleted;

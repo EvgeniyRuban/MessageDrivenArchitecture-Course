@@ -14,7 +14,13 @@ public class KitchenReadyConsumer : IConsumer<IKitchenReady>
 
     public Task Consume(ConsumeContext<IKitchenReady> context)
     {
-        _notifier.Accept(context.Message.OrderId, Accepted.Kitchen);
+        var kitchenIsReady = context.Message.IsReady;
+
+        _notifier.Accept(context.Message.OrderId, 
+                        kitchenIsReady ? Accepted.Kitchen
+                                       : Accepted.Rejected);
+
+        _notifier.Notify(context.Message.OrderId);
 
         return Task.CompletedTask;
     }
