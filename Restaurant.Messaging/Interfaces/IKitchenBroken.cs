@@ -1,5 +1,6 @@
 ﻿namespace Restaurant.Messaging;
 
-public class Dish
+public interface IKitchenBroken
 {
+
 }

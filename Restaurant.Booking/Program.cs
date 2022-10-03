@@ -26,6 +26,8 @@ public class Program
             {
                 services.AddMassTransit(x =>
                 {
+                    x.AddConsumer<KitchenBrokenConsumer>();
+
                     x.UsingRabbitMq((context, cfg) =>
                     {
                         cfg.Host(
@@ -36,6 +38,8 @@ public class Program
                                 hostSettings.Username(config[$"{nameof(RabbitMQHostConfig)}:{RabbitMQHostConfigDefinition.UserName}"]);
                                 hostSettings.Password(config[$"{nameof(RabbitMQHostConfig)}:{RabbitMQHostConfigDefinition.Password}"]);
                             });
+
+                        cfg.ConfigureEndpoints(context);
                     });
                 });
 
@@ -45,9 +49,9 @@ public class Program
                         options.WaitUntilStarted = true;
                     });
 
-                services.AddTransient<Restaurant>();
+                services.AddSingleton<Restaurant>();
 
-                services.AddHostedService<Worker>();
+                services.AddHostedService<RestaurantWorkerBackgroundService>();
             });
 
         return builder;

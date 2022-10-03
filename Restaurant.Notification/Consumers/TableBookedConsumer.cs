@@ -3,11 +3,11 @@ using Restaurant.Messaging;
 
 namespace Restaurant.Notification.Consumers;
 
-public sealed class NotifierTableBookedConsumer : IConsumer<ITableBooked>
+public sealed class TableBookedConsumer : IConsumer<ITableBooked>
 {
     private readonly Notifier _notifier;
 
-    public NotifierTableBookedConsumer(Notifier notifier)
+    public TableBookedConsumer(Notifier notifier)
     {
         _notifier = notifier;
     }
@@ -19,6 +19,7 @@ public sealed class NotifierTableBookedConsumer : IConsumer<ITableBooked>
         _notifier.Accept(context.Message.OrderId,
                          result ? Accepted.Booking : Accepted.Rejected,
                          context.Message.ClientId);
+        _notifier.Notify(context.Message.OrderId);
 
         return Task.CompletedTask;
     }
