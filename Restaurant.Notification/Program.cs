@@ -27,13 +27,7 @@ public class Program
             {
                 services.AddMassTransit(x =>
                 {
-                    x.AddConsumer<KitchenBrokenConsumer>()
-                     .Endpoint(cfg => cfg.Temporary = true);
-                    x.AddConsumer<KitchenReadyConsumer>()
-                     .Endpoint(cfg => cfg.Temporary = true);
-                    x.AddConsumer<TableBookedConsumer>()
-                     .Endpoint(cfg => cfg.Temporary = true);
-                    x.AddConsumer<BookingTableExpiredConsumer>()
+                    x.AddConsumer<NotifyConsumer>()
                      .Endpoint(cfg => cfg.Temporary = true);
 
                     x.UsingRabbitMq((context, cfg) =>
@@ -51,13 +45,7 @@ public class Program
                     });
                 });
 
-                services.AddSingleton<Notifier>();
-
-                services.AddOptions<MassTransitHostOptions>()
-                    .Configure(options =>
-                    {
-                        options.WaitUntilStarted = true;
-                    });
+                services.AddTransient<Notifier>();
             });
 
         return builder;

@@ -1,6 +1,6 @@
 ﻿namespace Restaurant.Messaging;
 
-public interface IBookingCancellation
+public interface IBookingCancelled
 {
     public Guid OrderId { get; }
 }

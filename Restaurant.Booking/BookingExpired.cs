@@ -4,9 +4,9 @@ namespace Restaurant.Booking;
 
 public sealed class BookingExpired : IBookingExpired
 {
-    private readonly RestaurantBooking _instance;
+    private readonly BookingState _instance;
 
-    public BookingExpired(RestaurantBooking instance)
+    public BookingExpired(BookingState instance)
     {
         _instance = instance;
     }

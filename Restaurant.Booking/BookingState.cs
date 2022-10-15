@@ -2,7 +2,7 @@
 
 namespace Restaurant.Booking;
 
-public class RestaurantBooking : SagaStateMachineInstance
+public class BookingState : SagaStateMachineInstance
 {
     public Guid CorrelationId { get; set; }
     public int CurrentState { get; set; }

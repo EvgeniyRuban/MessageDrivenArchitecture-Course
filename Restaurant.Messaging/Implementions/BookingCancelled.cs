@@ -1,8 +1,8 @@
 ﻿namespace Restaurant.Messaging;
 
-public sealed class BookingCancellation : IBookingCancellation
+public sealed class BookingCancelled : IBookingCancelled
 {
-    public BookingCancellation(Guid orderId)
+    public BookingCancelled(Guid orderId)
     {
         ArgumentNullException.ThrowIfNull(orderId, nameof(orderId));
 

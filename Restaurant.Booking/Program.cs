@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Configuration;
 using MassTransit;
+using Restaurant.Booking.Consumers;
 
 namespace Restaurant.Booking;
 
@@ -26,13 +27,13 @@ public class Program
             {
                 services.AddMassTransit(x =>
                 {
-                    x.AddConsumer<KitchenBrokenConsumer>()
+                    x.AddConsumer<BookingRequestedConsumer>()
                      .Endpoint(cfg => cfg.Temporary = true);
 
                     x.AddConsumer<BookingRequestedFaultConsumer>()
                      .Endpoint(cfg => cfg.Temporary = true);
 
-                    x.AddSagaStateMachine<RestaurantBookingSaga, RestaurantBooking>()
+                    x.AddSagaStateMachine<BookingStateMachine, BookingState>()
                             .Endpoint(e => e.Temporary = true)
                             .InMemoryRepository();
 
@@ -55,15 +56,11 @@ public class Program
                     });
                 });
 
-                services.AddOptions<MassTransitHostOptions>()
-                    .Configure(options =>
-                    {
-                        options.WaitUntilStarted = true;
-                    });
-
                 services.AddSingleton<Restaurant>();
+                services.AddTransient<BookingState>();
+                services.AddTransient<BookingStateMachine>();
 
-                services.AddHostedService<RestaurantWorkerBackgroundService>();
+                services.AddHostedService<WorkerBackgroundService>();
             });
 
         return builder;
