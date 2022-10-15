@@ -27,10 +27,14 @@ public class Program
             {
                 services.AddMassTransit(x =>
                 {
-                    x.AddConsumer<KitchenBrokenConsumer>();
-                    x.AddConsumer<KitchenReadyConsumer>();
-                    x.AddConsumer<TableBookedConsumer>();
-                    x.AddConsumer<BookingTableExpiredConsumer>();
+                    x.AddConsumer<KitchenBrokenConsumer>()
+                     .Endpoint(cfg => cfg.Temporary = true);
+                    x.AddConsumer<KitchenReadyConsumer>()
+                     .Endpoint(cfg => cfg.Temporary = true);
+                    x.AddConsumer<TableBookedConsumer>()
+                     .Endpoint(cfg => cfg.Temporary = true);
+                    x.AddConsumer<BookingTableExpiredConsumer>()
+                     .Endpoint(cfg => cfg.Temporary = true);
 
                     x.UsingRabbitMq((context, cfg) =>
                     {
