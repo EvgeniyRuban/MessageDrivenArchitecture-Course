@@ -26,7 +26,7 @@ public class Program
             {
                 services.AddMassTransit(x =>
                 {
-                    x.AddConsumer<KitchenBrokenConsumer>()
+                    x.AddConsumer<BookingRequestedConsumer>()
                      .Endpoint(cfg => cfg.Temporary = true);
 
                     x.AddConsumer<BookingRequestedFaultConsumer>()
@@ -55,11 +55,7 @@ public class Program
                     });
                 });
 
-                services.AddOptions<MassTransitHostOptions>()
-                    .Configure(options =>
-                    {
-                        options.WaitUntilStarted = true;
-                    });
+                services.AddOptions<MassTransitHostOptions>();
 
                 services.AddSingleton<Restaurant>();
 

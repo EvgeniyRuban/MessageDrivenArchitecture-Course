@@ -27,7 +27,7 @@ public class Program
             {
                 services.AddMassTransit(x =>
                 {
-                    x.AddConsumer<KitchenTableBookedConsumer>()
+                    x.AddConsumer<BookingRequestedConsumer>()
                      .Endpoint(cfg => cfg.Temporary = true);
 
                     x.AddDelayedMessageScheduler();
@@ -51,7 +51,7 @@ public class Program
 
                 services.AddSingleton<Kitchen>();
 
-                services.AddHostedService<KitchenBreakerBackgroundService>();
+                //services.AddHostedService<KitchenBreakerBackgroundService>();
 
                 services.AddOptions<MassTransitHostOptions>()
                 .Configure(options =>

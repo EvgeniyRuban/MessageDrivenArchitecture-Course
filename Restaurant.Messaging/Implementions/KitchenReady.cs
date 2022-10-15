@@ -2,12 +2,10 @@
 
 public class KitchenReady : IKitchenReady
 {
-    public KitchenReady(Guid orderId, bool isReady)
+    public KitchenReady(Guid orderId)
     {
         OrderId = orderId;
-        IsReady = isReady;
     }
 
     public Guid OrderId { get; }
-    public bool IsReady { get; }
 }

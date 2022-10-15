@@ -1,8 +1,8 @@
 ﻿namespace Restaurant.Messaging;
 
-public sealed class BookingRequest : IBookingRequested
+public sealed class BookingRequested : IBookingRequested
 {
-    public BookingRequest(Guid orderId, Guid clientId, DateTime creationDate, Dish[]? preorder = null)
+    public BookingRequested(Guid orderId, Guid clientId, DateTime creationDate, Dish[]? preorder = null)
     {
         OrderId = orderId;
         ClientId = clientId;

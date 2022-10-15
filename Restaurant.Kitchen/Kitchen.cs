@@ -26,29 +26,9 @@ public sealed class Kitchen
         _bus = bus;
     }
 
-    public void CheckKitchenReady(Guid orderId, params Dish[]? dishes)
-    {
-        bool canCooking = true;
-
-        ResetStoplist();
-        TryChangeStoplistRandom(chance: 20);
-
-        if (dishes is not null)
-        {
-            canCooking = !CheckStoplist(dishes);
-        }
-
-        if (!canCooking)
-        {
-            _bus.Publish<IKitchenReady>(new KitchenReady(orderId, false));
-            Console.WriteLine($"Заказ {orderId} не подходит по стоп листу.");
-        }
-
-        _bus.Publish<IKitchenReady>(new KitchenReady(orderId, true));
-        Console.WriteLine($"Заказ {orderId} принят!");
-    }
+    public bool CheckKitchenReady(params Dish[]? dishes) => dishes is null ? true : CheckStoplist(dishes);
     /// <summary>
-    /// Check if the dish is on the stop list.
+    /// Check if the <paramref name="dish"></paramref> is on the stop list.
     /// </summary>
     /// <param name="dish"></param>
     /// <returns>
@@ -61,15 +41,16 @@ public sealed class Kitchen
         return hasInList;
     }
     /// <summary>
-    /// Check if the dishes is on the stop list.
+    /// Check if the <paramref name="dishes"></paramref> is on the stop list.
     /// </summary>
-    /// <param name="dish"></param>
+    /// <param name="dishes"></param>
     /// <returns>
-    /// Returns true if <paramref name="dish"></paramref> was found in stop list.
+    /// Returns true if <paramref name="dishes"></paramref> were found in stop list.
     /// </returns>
     private bool CheckStoplist(params Dish[] dishes)
     {
-        bool hasInList = default;
+        bool hasInList = false;
+
         for (int i = 0; i < dishes.Length; i++)
         {
             _stoplist.TryGetValue(dishes[i], out hasInList);

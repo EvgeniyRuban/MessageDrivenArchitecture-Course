@@ -37,7 +37,7 @@ public sealed class RestaurantBookingSaga : MassTransitStateMachine<RestaurantBo
             });
 
         Initially(
-            When(BookingRequested)
+            When(TableBooked)
                 .Then(context =>
                 {
                     context.Instance.CorrelationId = context.Data.OrderId;
@@ -78,9 +78,9 @@ public sealed class RestaurantBookingSaga : MassTransitStateMachine<RestaurantBo
     }
 
     public State AwaitingBookingApproved { get; private set; }
-    public Event<IBookingRequested> BookingRequested { get; private set; }
     public Event<ITableBooked> TableBooked { get; private set; }
     public Event<IKitchenReady> KitchenReady { get; private set; }
+    public Event<IBookingRequested> BookingRequested { get; private set; }
 
     public Event<Fault<IBookingRequested>> BookingRequestFault { get; private set; }
 
