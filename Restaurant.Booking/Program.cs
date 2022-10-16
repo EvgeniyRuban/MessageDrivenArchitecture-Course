@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Configuration;
 using MassTransit;
+using Restaurant.Booking.Consumers;
 
 namespace Restaurant.Booking;
 
@@ -26,7 +27,20 @@ public class Program
             {
                 services.AddMassTransit(x =>
                 {
-                    x.AddConsumer<KitchenBrokenConsumer>();
+                    x.AddConsumer<BookingRequestedFaultConsumer>()
+                        .Endpoint(cfg => cfg.Temporary = true);
+
+                    x.AddConsumer<BookingRequestedConsumer>()
+                        .Endpoint(cfg => cfg.Temporary = true);
+
+                    x.AddConsumer<BookingApprovedConsumer>()
+                        .Endpoint(cfg => cfg.Temporary = true);
+
+                    x.AddSagaStateMachine<BookingStateMachine, BookingState>()
+                            .Endpoint(e => e.Temporary = true)
+                            .InMemoryRepository();
+
+                    x.AddDelayedMessageScheduler();
 
                     x.UsingRabbitMq((context, cfg) =>
                     {
@@ -39,19 +53,17 @@ public class Program
                                 hostSettings.Password(config[$"{nameof(RabbitMQHostConfig)}:{RabbitMQHostConfigDefinition.Password}"]);
                             });
 
+                        cfg.UseDelayedMessageScheduler();
+                        cfg.UseInMemoryOutbox();
                         cfg.ConfigureEndpoints(context);
                     });
                 });
 
-                services.AddOptions<MassTransitHostOptions>()
-                    .Configure(options =>
-                    {
-                        options.WaitUntilStarted = true;
-                    });
-
                 services.AddSingleton<Restaurant>();
+                services.AddTransient<BookingState>();
+                services.AddTransient<BookingStateMachine>();
 
-                services.AddHostedService<RestaurantWorkerBackgroundService>();
+                services.AddHostedService<WorkerBackgroundService>();
             });
 
         return builder;

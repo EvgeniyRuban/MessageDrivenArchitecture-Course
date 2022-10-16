@@ -1,10 +1,10 @@
 ﻿namespace Restaurant.Messaging;
 
-public interface ITableBooked
+public interface IBookingRequested
 {
     public Guid OrderId { get; }
     public Guid ClientId { get; }
-    public Guid TableId { get; }
-    public bool IsSuccess { get; }
+    public TimeSpan ArriveVia { get; }
+    public Dish[]? PreOrder { get; }
     public DateTime CreationDate { get; }
 }
