@@ -28,7 +28,7 @@ public class Program
                 services.AddMassTransit(x =>
                 {
                     x.AddConsumer<KitchenBookingRequestedConsumer>()
-                     .Endpoint(cfg => cfg.Temporary = true);
+                        .Endpoint(cfg => cfg.Temporary = true);
 
                     x.AddDelayedMessageScheduler();
 

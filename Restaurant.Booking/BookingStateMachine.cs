@@ -22,12 +22,16 @@ public sealed class BookingStateMachine : MassTransitStateMachine<BookingState>
             x =>
                 x.CorrelateById(context => context.Message.OrderId));
 
-        CompositeEvent(() => BookingApproved,
-            x => x.ReadyEventStatus, KitchenReady, TableBooked);
-
         Event(() => BookingRequestedFault,
             x =>
                 x.CorrelateById(m => m.Message.Message.OrderId));
+
+        Event(() => GuestArrived,
+            x =>
+                x.CorrelateById(context => context.Message.OrderId));
+
+        CompositeEvent(() => BookingApproved,
+            x => x.ReadyEventStatus, KitchenReady, TableBooked);
 
         Schedule(() => BookingExpired,
             x => x.ExpirationId, x =>
@@ -58,7 +62,9 @@ public sealed class BookingStateMachine : MassTransitStateMachine<BookingState>
                     (INotify)new Notify(context.Instance.OrderId,
                                         context.Instance.ClientId,
                                         "Стол успешно забронирован"))
-                .Finalize(),
+                .Publish(context =>
+                    (IBookingApproved)new BookingApproved(context.Instance.OrderId, context.Instance.ClientId))
+            .TransitionTo(AwaitingGuestArrived),
 
             When(BookingRequestedFault)
                 .Then(context => Console.WriteLine($"Ошибочка вышла!"))
@@ -72,14 +78,22 @@ public sealed class BookingStateMachine : MassTransitStateMachine<BookingState>
                 .Finalize()
         );
 
+        During(AwaitingGuestArrived,
+            When(GuestArrived)
+                .Finalize()
+        );
+
         SetCompletedWhenFinalized();
     }
 
     public State AwaitingBookingApproved { get; private set; }
+    public State AwaitingGuestArrived { get; private set; }
 
     public Event<ITableBooked> TableBooked { get; private set; }
     public Event<IKitchenReady> KitchenReady { get; private set; }
     public Event<IBookingRequested> BookingRequested { get; private set; }
+    public Event<IGuestArrived> GuestArrived { get; private set; }
+
 
     public Event<Fault<IBookingRequested>> BookingRequestedFault { get; private set; }
 

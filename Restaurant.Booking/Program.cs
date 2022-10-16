@@ -28,10 +28,13 @@ public class Program
                 services.AddMassTransit(x =>
                 {
                     x.AddConsumer<BookingRequestedConsumer>()
-                     .Endpoint(cfg => cfg.Temporary = true);
+                        .Endpoint(cfg => cfg.Temporary = true);
 
                     x.AddConsumer<BookingRequestedFaultConsumer>()
-                     .Endpoint(cfg => cfg.Temporary = true);
+                        .Endpoint(cfg => cfg.Temporary = true);
+
+                    x.AddConsumer<BookingApprovedConsumer>()
+                        .Endpoint(cfg => cfg.Temporary = true);
 
                     x.AddSagaStateMachine<BookingStateMachine, BookingState>()
                             .Endpoint(e => e.Temporary = true)

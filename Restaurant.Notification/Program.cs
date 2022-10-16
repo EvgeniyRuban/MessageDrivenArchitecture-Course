@@ -28,7 +28,7 @@ public class Program
                 services.AddMassTransit(x =>
                 {
                     x.AddConsumer<NotifyConsumer>()
-                     .Endpoint(cfg => cfg.Temporary = true);
+                        .Endpoint(cfg => cfg.Temporary = true);
 
                     x.UsingRabbitMq((context, cfg) =>
                     {
