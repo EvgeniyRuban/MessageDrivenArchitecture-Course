@@ -50,6 +50,14 @@ public class Program
                 });
 
                 services.AddSingleton<Kitchen>();
+
+                services.AddHostedService<KitchenBreakerBackgroundService>();
+
+                services.AddOptions<MassTransitHostOptions>()
+                .Configure(options =>
+                {
+                    options.WaitUntilStarted = true;
+                });
             });
 
         return builder;

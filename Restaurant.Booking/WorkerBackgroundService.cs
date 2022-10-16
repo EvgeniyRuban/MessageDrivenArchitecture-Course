@@ -29,9 +29,15 @@ public sealed class WorkerBackgroundService : BackgroundService
     {
         do
         {
-            Console.WriteLine("Привет! Желаете забронировать столик?");
+            var range = (7, 15);
+            var randomGuestArrivalInterval = TimeSpan.FromSeconds(new Random().Next(range.Item1, range.Item2 + 1));
 
-            var bookingRequested = new BookingRequested(NewId.NextGuid(), NewId.NextGuid(), DateTime.UtcNow);
+            Console.WriteLine($"Запрос на бронь. Время прибыти: {randomGuestArrivalInterval}.");
+
+            var bookingRequested = new BookingRequested(NewId.NextGuid(), 
+                                                        NewId.NextGuid(), 
+                                                        DateTime.UtcNow, 
+                                                        randomGuestArrivalInterval);
 
             await _bus.Publish<IBookingRequested>(bookingRequested, stoppingToken);
 

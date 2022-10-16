@@ -59,6 +59,12 @@ public class Program
                     });
                 });
 
+                services.AddOptions<MassTransitHostOptions>()
+                    .Configure(options =>
+                    {
+                        options.WaitUntilStarted = true;
+                    });
+
                 services.AddSingleton<Restaurant>();
                 services.AddTransient<BookingState>();
                 services.AddTransient<BookingStateMachine>();
