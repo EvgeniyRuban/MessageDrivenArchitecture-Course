@@ -4,7 +4,7 @@ namespace Restaurant.Booking;
 
 public sealed class Restaurant
 {
-    private readonly ConcurrentDictionary<int, Table> _tables;
+    private readonly ConcurrentDictionary<Guid, Table> _tables;
     private readonly TimeSpan _syncOperationDelay = TimeSpan.FromSeconds(5);
     private readonly object _lock = new ();
 
@@ -20,17 +20,15 @@ public sealed class Restaurant
     /// <returns> 
     /// Returns a table id, if restaurant contains table with current <paramref name = "numberOfSeats"/>, otherwise null.
     /// </returns>
-    public int? BookTable(int numberOfSeats)
+    public Guid? BookTable(int numberOfSeats)
     {
         Table? table = null;
 
         lock (_lock)
         {
-            table = _tables.FirstOrDefault(pair =>
-                                           pair.Value.SeatsCount >= numberOfSeats &&
-                                           pair.Value.State == TableState.Free).Value;
-
-            Task.Delay(_syncOperationDelay).Wait();
+            table = _tables.FirstOrDefault(p =>
+                                          p.Value.SeatsCount >= numberOfSeats &&
+                                          p.Value.State == TableState.Free).Value;
 
             if (table is null)
             {
@@ -49,15 +47,15 @@ public sealed class Restaurant
     /// <returns> 
     /// Returns a table id, if restaurant contains table with current <paramref name = "numberOfSeats"/>, otherwise null.
     /// </returns>
-    public async Task<int?> BookTableAsync(int numberOfSeats)
+    public async Task<Guid?> BookTableAsync(int numberOfSeats)
     {
-        return await Task.Run<int?>(() =>
+        return await Task.Run<Guid?>(() =>
         {
             lock (_lock)
             {
-                var table = _tables.FirstOrDefault(pair =>
-                                               pair.Value.SeatsCount >= numberOfSeats &&
-                                               pair.Value.State == TableState.Free).Value;
+                var table = _tables.FirstOrDefault(p =>
+                                                   p.Value.SeatsCount >= numberOfSeats &&
+                                                   p.Value.State == TableState.Free).Value;
 
                 if (table is null)
                 {
@@ -78,13 +76,13 @@ public sealed class Restaurant
     /// Returns true if unbooking operation completed succesfully, if table with current <paramref name="id"/>
     /// is free, returns false, otherwise null (table with current <paramref name="id"/> doesn't exists).
     /// </returns>
-    public bool? UnbookTable(int id)
+    public bool? UnbookTable(Guid tableId)
     {
         Table? table = null;
 
         lock (_lock)
         {
-            table = _tables.FirstOrDefault(pair => pair.Value.Id == id).Value;
+            table = _tables.FirstOrDefault(pair => pair.Key == tableId).Value;
 
             Task.Delay(_syncOperationDelay).Wait();
 
@@ -110,13 +108,13 @@ public sealed class Restaurant
     /// Returns true if unbooking operation completed succesfully, if table with current <paramref name="id"/>
     /// is free, returns false, otherwise null (table with current <paramref name="id"/> doesn't exists).
     /// </returns>
-    public async Task<bool?> UnbookTableAsync(int id)
+    public async Task<bool?> UnbookTableAsync(Guid tableId)
     {
         return await Task.Run<bool?>(() =>
         {
             lock (_lock)
             {
-                var table = _tables.FirstOrDefault(pair => pair.Value.Id == id).Value;
+                var table = _tables.FirstOrDefault(pair => pair.Key == tableId).Value;
 
                 if (table is null)
                 {
@@ -149,20 +147,9 @@ public sealed class Restaurant
             }
         });
     }
-    public Task SetBookingAutoCancellation(int tableId, CancellationToken stoppingToken = default)
+    private ConcurrentDictionary<Guid, Table> GetRandomTables(int count)
     {
-        return Task.Run(() =>
-        {
-            stoppingToken.ThrowIfCancellationRequested();
-            new Timer((_) => UnbookTable(tableId),
-                  null,
-                  TimeSpan.FromSeconds(20),
-                  default);
-        }, stoppingToken);
-    }
-    private ConcurrentDictionary<int, Table> GetRandomTables(int count)
-    {
-        var tables = new ConcurrentDictionary<int, Table>();
+        var tables = new ConcurrentDictionary<Guid, Table>();
         var rnd = new Random();
         NumberOfSeats[] arr =
         {
@@ -177,9 +164,10 @@ public sealed class Restaurant
 
         for (int i = 0; i < count; i++)
         {
+            var id = Guid.NewGuid();
             tables.TryAdd(
-                i + 1, 
-                new (i + 1,(int)arr[rnd.Next(arr.Length)]));
+                id, 
+                new (id, (int)arr[rnd.Next(arr.Length)]));
         }
 
         return tables;

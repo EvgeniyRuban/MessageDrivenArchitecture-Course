@@ -1,8 +1,8 @@
 ﻿namespace Restaurant.Messaging;
 
-public class KitchenReady : IKitchenReady
+public sealed class GuestArrived : IGuestArrived
 {
-    public KitchenReady(Guid orderId)
+    public GuestArrived(Guid orderId)
     {
         OrderId = orderId;
     }

@@ -27,7 +27,10 @@ public class Program
             {
                 services.AddMassTransit(x =>
                 {
-                    x.AddConsumer<KitchenTableBookedConsumer>();
+                    x.AddConsumer<KitchenBookingRequestedConsumer>()
+                        .Endpoint(cfg => cfg.Temporary = true);
+
+                    x.AddDelayedMessageScheduler();
 
                     x.UsingRabbitMq((context, cfg) =>
                     {
@@ -40,19 +43,13 @@ public class Program
                                 hostSettings.Password(config[$"{nameof(RabbitMQHostConfig)}:{RabbitMQHostConfigDefinition.Password}"]);
                             });
 
+                        cfg.UseDelayedMessageScheduler();
+                        cfg.UseInMemoryOutbox();
                         cfg.ConfigureEndpoints(context);
                     });
                 });
 
                 services.AddSingleton<Kitchen>();
-
-                services.AddHostedService<KitchenBreakerBackgroundService>();
-
-                services.AddOptions<MassTransitHostOptions>()
-                .Configure(options =>
-                {
-                    options.WaitUntilStarted = true;
-                });
             });
 
         return builder;
