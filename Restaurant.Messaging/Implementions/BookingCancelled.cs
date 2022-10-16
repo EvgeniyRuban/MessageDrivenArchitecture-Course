@@ -2,7 +2,7 @@
 
 public sealed class BookingCancelled : IBookingCancelled
 {
-    public BookingCancelled(Guid orderId)
+    public BookingCancelled(Guid orderId, Guid tableId)
     {
         ArgumentNullException.ThrowIfNull(orderId, nameof(orderId));
 
@@ -10,4 +10,5 @@ public sealed class BookingCancelled : IBookingCancelled
     }
 
     public Guid OrderId { get; }
+    public Guid TableId { get; }
 }

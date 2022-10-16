@@ -40,14 +40,22 @@ public sealed class BookingStateMachine : MassTransitStateMachine<BookingState>
                 x.Received = e => e.CorrelateById(context => context.Message.OrderId);
             });
 
+        Schedule(() => GuestArrivalExpired,
+            x => x.ExpirationId, x =>
+            {
+                x.Delay = TimeSpan.FromSeconds(1);
+                x.Received = e => e.CorrelateById(context => context.Message.OrderId);
+            });
+
         Initially(
-            When(TableBooked)
+            When(BookingRequested)
                 .Then(context =>
                 {
                     context.Instance.CorrelationId = context.Data.OrderId;
                     context.Instance.OrderId = context.Data.OrderId;
                     context.Instance.ClientId = context.Data.ClientId;
-                    Console.WriteLine("[State: Awaiting booking approved " + context.Data.CreationDate);
+                    context.Instance.GuestArrivalVia = context.Data.ArriveVia;
+                    Console.WriteLine($"[Order: {context.Data.OrderId}] - ожидается подтвеждения брони.");
                 })
                 .Schedule(BookingExpired,
                     context => new BookingExpired(context.Instance),
@@ -61,25 +69,42 @@ public sealed class BookingStateMachine : MassTransitStateMachine<BookingState>
                 .Publish(context =>
                     (INotify)new Notify(context.Instance.OrderId,
                                         context.Instance.ClientId,
-                                        "Стол успешно забронирован"))
+                                        "стол успешно забронирован"))
                 .Publish(context =>
                     (IBookingApproved)new BookingApproved(context.Instance.OrderId, context.Instance.ClientId))
-            .TransitionTo(AwaitingGuestArrived),
+                .Schedule(GuestArrivalExpired,
+                    context => new GuestArrivalExpired(context.Instance),
+                    context => context.Instance.GuestArrivalVia)
+                .TransitionTo(AwaitingGuestArrived),
+
+            When(TableBooked)
+                .Then(context => context.Instance.TableId = context.Data.TableId),
 
             When(BookingRequestedFault)
-                .Then(context => Console.WriteLine($"Ошибочка вышла!"))
+                .Then(context => Console.WriteLine($"[Order: {context.Instance.OrderId}] - произошла ошибка."))
                 .Publish(context => (INotify)new Notify(context.Instance.OrderId,
-                    context.Instance.ClientId,
-                    "Приносим извинения, стол забронировать не получилось"))
+                                                        context.Instance.ClientId,
+                                                        "приносим извинения, стол забронировать не получилось"))
                 .Finalize(),
 
             When(BookingExpired.Received)
                 .Then(context => Console.WriteLine($"Отмена заказа {context.Instance.OrderId}."))
+                .Publish(context => new BookingCancelled(context.Instance.OrderId, context.Instance.TableId))
                 .Finalize()
         );
 
         During(AwaitingGuestArrived,
             When(GuestArrived)
+                .Unschedule(GuestArrivalExpired)
+                .Then(context => Console.WriteLine($"[Order: {context.Instance.OrderId}] - гость прибыл."))
+                .Finalize(),
+
+            When(GuestArrivalExpired.Received)
+                .Then(context => Console.WriteLine($"[Order: {context.Message.OrderId}] - гость не пришел."))
+                .Publish(context => new BookingCancelled(context.Instance.OrderId, context.Instance.TableId))
+                .Publish(context => new Notify(context.Instance.OrderId,
+                                               context.Instance.ClientId,
+                                               "ваша бронь снята по истечению времяни"))
                 .Finalize()
         );
 
@@ -87,7 +112,6 @@ public sealed class BookingStateMachine : MassTransitStateMachine<BookingState>
     }
 
     public State AwaitingBookingApproved { get; private set; }
-<<<<<<< HEAD:Restaurant.Booking/BookingStateMachine.cs
     public State AwaitingGuestArrived { get; private set; }
 
     public Event<ITableBooked> TableBooked { get; private set; }
@@ -95,14 +119,10 @@ public sealed class BookingStateMachine : MassTransitStateMachine<BookingState>
     public Event<IBookingRequested> BookingRequested { get; private set; }
     public Event<IGuestArrived> GuestArrived { get; private set; }
 
-=======
-    public Event<ITableBooked> TableBooked { get; private set; }
-    public Event<IKitchenReady> KitchenReady { get; private set; }
-    public Event<IBookingRequested> BookingRequested { get; private set; }
->>>>>>> b5fc17d5c65a0843b8440db11e4c45667f627a5e:Restaurant.Booking/RestaurantBookingSaga.cs
+    public Event BookingApproved { get; private set; }
 
     public Event<Fault<IBookingRequested>> BookingRequestedFault { get; private set; }
 
     public Schedule<BookingState, IBookingExpired> BookingExpired { get; private set; }
-    public Event BookingApproved { get; private set; }
+    public Schedule<BookingState, IGuestArrivalExpired> GuestArrivalExpired { get; private set; }
 }

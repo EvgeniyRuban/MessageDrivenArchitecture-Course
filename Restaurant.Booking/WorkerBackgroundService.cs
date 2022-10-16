@@ -25,23 +25,21 @@ public sealed class WorkerBackgroundService : BackgroundService
     /// </summary>
     /// <param name="interval">Interval between requests.</param>
     /// <returns></returns>
-    private async Task SimulateProcessing(TimeSpan interval, CancellationToken stoppingToken = default)
+    private async Task SimulateProcessing(TimeSpan retryInterval, CancellationToken stoppingToken = default)
     {
         do
         {
-            var range = (7, 15);
-            var randomGuestArrivalInterval = TimeSpan.FromSeconds(new Random().Next(range.Item1, range.Item2 + 1));
-
-            Console.WriteLine($"Запрос на бронь. Время прибыти: {randomGuestArrivalInterval}.");
+            var arrivalVia = TimeSpan.FromSeconds(10);
+            Console.WriteLine($"\nЗапрос на бронь. Прибытие через: {arrivalVia}.");
 
             var bookingRequested = new BookingRequested(NewId.NextGuid(), 
                                                         NewId.NextGuid(), 
                                                         DateTime.UtcNow, 
-                                                        randomGuestArrivalInterval);
+                                                        arrivalVia);
 
             await _bus.Publish<IBookingRequested>(bookingRequested, stoppingToken);
 
-            await Task.Delay(interval, stoppingToken);
+            await Task.Delay(retryInterval, stoppingToken);
 
         } while (!stoppingToken.IsCancellationRequested);
     }

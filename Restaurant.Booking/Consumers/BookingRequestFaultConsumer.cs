@@ -15,7 +15,7 @@ public sealed class BookingRequestedFaultConsumer : IConsumer<Fault<IBookingRequ
 
     public Task Consume(ConsumeContext<Fault<IBookingRequested>> context)
     {
-        Console.WriteLine($"[OrderId: {context.Message.Message.OrderId}] Отмена в зале");
+        Console.WriteLine($"[Order: {context.Message.Message.OrderId}] - отмена в зале.");
 
         return Task.CompletedTask;
     }

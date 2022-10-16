@@ -2,14 +2,14 @@
 
 public sealed class Table
 {
-    public Table(int id, int seatsCount)
+    public Table(Guid id, int seatsCount)
     {
         Id = id;
         State = TableState.Free;
         SeatsCount = seatsCount;
     }
 
-    public int Id { get; }
+    public Guid Id { get; }
     public TableState State { get; private set; }
     public int SeatsCount { get; }
 

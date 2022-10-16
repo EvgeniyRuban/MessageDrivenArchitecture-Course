@@ -20,18 +20,19 @@ public sealed class BookingRequestedConsumer : IConsumer<IBookingRequested>
 
         if (bookedTableId is not null)
         {
-        await context.Publish<ITableBooked>(
-            new TableBooked(
-                context.Message.OrderId, 
-                context.Message.ClientId,
-                context.Message.CreationDate,
-                bookedTableId is not null));
-    }
+            await context.Publish<ITableBooked>(
+                new TableBooked(
+                    context.Message.OrderId, 
+                    context.Message.ClientId,
+                    (Guid)bookedTableId,
+                    context.Message.CreationDate,
+                    bookedTableId is not null));
+        }
 
         string answer = bookedTableId is null
             ? "неудалось найти подходящий столик."
-            : $"для вас подобран столик номер {bookedTableId}.";
+            : $"для вас подобран столик.";
 
-        Console.WriteLine($"[OrderId: {context.Message.OrderId}] - {answer}");
+        Console.WriteLine($"[Order: {context.Message.OrderId}] - {answer}");
     }
 }
