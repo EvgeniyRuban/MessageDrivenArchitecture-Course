@@ -12,14 +12,14 @@ public class Program
     {
         Console.OutputEncoding = System.Text.Encoding.UTF8;
         Console.Title = GetConfigurationSection<AppSettings>()
-            [$"{nameof(AppSettings)}:{AppSettingsDefinition.ConsoleTitle}"];
+            [AppSettingsKeys.ConsoleTitle];
 
         CreateHostBuilder(args).Build().Run();
     }
 
-    public static IHostBuilder CreateHostBuilder(string[] args)
+    private static IHostBuilder CreateHostBuilder(string[] args)
     {
-        var config = GetConfigurationSection<RabbitMQHostConfig>();
+        var rabbitMqConfig = GetConfigurationSection<RabbitMqHostConfig>();
 
         var builder = 
         Host.CreateDefaultBuilder(args)
@@ -27,13 +27,22 @@ public class Program
             {
                 services.AddMassTransit(x =>
                 {
-                    x.AddConsumer<BookingRequestedFaultConsumer>()
+                    x.AddConsumer(GetGenericConsumerConfigurator<BookingRequestedConsumer>())
                         .Endpoint(cfg => cfg.Temporary = true);
 
-                    x.AddConsumer<BookingRequestedConsumer>()
+                    x.AddConsumer(GetGenericConsumerConfigurator<BookingApprovedConsumer>())
                         .Endpoint(cfg => cfg.Temporary = true);
 
-                    x.AddConsumer<BookingApprovedConsumer>()
+                    x.AddConsumer(GetGenericConsumerConfigurator<BookingCancelledConsumer>())
+                        .Endpoint(cfg => cfg.Temporary = true);
+
+                    x.AddConsumer(GetGenericConsumerConfigurator<BookingRequestedFaultConsumer>())
+                        .Endpoint(cfg => cfg.Temporary = true);
+
+                    x.AddConsumer(GetGenericConsumerConfigurator<KitchenReadyFaultConsumer>())
+                        .Endpoint(cfg => cfg.Temporary = true);
+
+                    x.AddConsumer(GetGenericConsumerConfigurator<TableBookedFaultConsumer>())
                         .Endpoint(cfg => cfg.Temporary = true);
 
                     x.AddSagaStateMachine<BookingStateMachine, BookingState>()
@@ -45,12 +54,12 @@ public class Program
                     x.UsingRabbitMq((context, cfg) =>
                     {
                         cfg.Host(
-                            host: config[$"{nameof(RabbitMQHostConfig)}:{RabbitMQHostConfigDefinition.HostName}"],
-                            virtualHost: config[$"{nameof(RabbitMQHostConfig)}:{RabbitMQHostConfigDefinition.VirtualHost}"],
+                            host: rabbitMqConfig[RabbitMqHostConfigKeys.Host],
+                            virtualHost: rabbitMqConfig[RabbitMqHostConfigKeys.VirtualHost],
                             hostSettings =>
                             {
-                                hostSettings.Username(config[$"{nameof(RabbitMQHostConfig)}:{RabbitMQHostConfigDefinition.UserName}"]);
-                                hostSettings.Password(config[$"{nameof(RabbitMQHostConfig)}:{RabbitMQHostConfigDefinition.Password}"]);
+                                hostSettings.Username(rabbitMqConfig[RabbitMqHostConfigKeys.User]);
+                                hostSettings.Password(rabbitMqConfig[RabbitMqHostConfigKeys.Password]);
                             });
 
                         cfg.UseDelayedMessageScheduler();
@@ -69,10 +78,21 @@ public class Program
         return builder;
     }
 
-    public static IConfigurationRoot? GetConfigurationSection<T>() where T : class
+    private static IConfigurationRoot? GetConfigurationSection<T>() where T : class
         => new ConfigurationBuilder()
                 .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
                 .AddJsonFile("appsettings.json")
                 .AddUserSecrets<T>()
                 .Build();
+
+    private static Action<IConsumerConfigurator<TConsumer>> GetGenericConsumerConfigurator<TConsumer>() 
+        where TConsumer : class
+        => config =>
+        {
+            config.UseScheduledRedelivery(r => r.Intervals(TimeSpan.FromSeconds(10),
+                                                           TimeSpan.FromSeconds(20),
+                                                           TimeSpan.FromSeconds(30)));
+
+            config.UseMessageRetry(r => r.Incremental(3, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(3)));
+        };
 }

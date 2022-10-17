@@ -3,7 +3,7 @@ using Restaurant.Messaging;
 
 namespace Restaurant.Booking.Consumers;
 
-public sealed class BookingApprovedConsumer : IConsumer<IBookingApproved>
+internal sealed class BookingApprovedConsumer : IConsumer<IBookingApproved>
 {
     public async Task Consume(ConsumeContext<IBookingApproved> context)
     {

@@ -2,7 +2,7 @@
 
 namespace Restaurant.Booking;
 
-public sealed class Restaurant
+internal sealed class Restaurant
 {
     private readonly ConcurrentDictionary<Guid, Table> _tables;
     private readonly TimeSpan _syncOperationDelay = TimeSpan.FromSeconds(5);

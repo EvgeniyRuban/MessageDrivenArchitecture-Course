@@ -6,20 +6,20 @@ using Restaurant.Notification.Consumers;
 
 namespace Restaurant.Notification;
 
-public class Program
+internal class Program
 {
-    public static void Main(string[] args)
+    private static void Main(string[] args)
     {
         Console.OutputEncoding = System.Text.Encoding.UTF8;
         Console.Title = GetConfigurationSection<AppSettings>()
-            [$"{nameof(AppSettings)}:{AppSettingsDefinition.ConsoleTitle}"];
+            [AppSettingsKeys.ConsoleTitle];
 
         CreateHostBuilder(args).Build().Run();
     }
 
-    public static IHostBuilder CreateHostBuilder(string[] args)
+    private static IHostBuilder CreateHostBuilder(string[] args)
     {
-        var config = GetConfigurationSection<RabbitMQHostConfig>();
+        var config = GetConfigurationSection<RabbitMqHostSettings>();
 
         var builder = 
         Host.CreateDefaultBuilder(args)
@@ -33,12 +33,12 @@ public class Program
                     x.UsingRabbitMq((context, cfg) =>
                     {
                         cfg.Host(
-                            host: config[$"{nameof(RabbitMQHostConfig)}:{RabbitMQHostConfigDefinition.HostName}"],
-                            virtualHost: config[$"{nameof(RabbitMQHostConfig)}:{RabbitMQHostConfigDefinition.VirtualHost}"],
+                            host: config[RabbitMqHostSettingsKeys.Host],
+                            virtualHost: config[RabbitMqHostSettingsKeys.VirtualHost],
                             hostSettings =>
                             {
-                                hostSettings.Username(config[$"{nameof(RabbitMQHostConfig)}:{RabbitMQHostConfigDefinition.UserName}"]);
-                                hostSettings.Password(config[$"{nameof(RabbitMQHostConfig)}:{RabbitMQHostConfigDefinition.Password}"]);
+                                hostSettings.Username(config[RabbitMqHostSettingsKeys.User]);
+                                hostSettings.Password(config[RabbitMqHostSettingsKeys.Password]);
                             });
 
                         cfg.ConfigureEndpoints(context);
@@ -51,7 +51,7 @@ public class Program
         return builder;
     }
 
-    public static IConfigurationRoot? GetConfigurationSection<T>() where T : class
+    private static IConfigurationRoot? GetConfigurationSection<T>() where T : class
         => new ConfigurationBuilder()
                 .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
                 .AddJsonFile("appsettings.json")
