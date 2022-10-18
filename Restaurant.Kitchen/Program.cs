@@ -11,15 +11,14 @@ public class Program
     public static void Main(string[] args)
     {
         Console.OutputEncoding = System.Text.Encoding.UTF8;
-        Console.Title = GetConfigurationSection<AppSettings>()
-            [$"{nameof(AppSettings)}:{AppSettingsDefinition.ConsoleTitle}"];
+        Console.Title = GetConfigurationSection<AppSettings>()[AppSettingsKeys.ConsoleTitle];
 
         CreateHostBuilder(args).Build().Run();
     }
 
-    public static IHostBuilder CreateHostBuilder(string[] args)
+    private static IHostBuilder CreateHostBuilder(string[] args)
     {
-        var config = GetConfigurationSection<RabbitMQHostConfig>();
+        var rabbitMqConfig = GetConfigurationSection<RabbitMqHostSettings>();
 
         var builder =
         Host.CreateDefaultBuilder(args)
@@ -27,25 +26,29 @@ public class Program
             {
                 services.AddMassTransit(x =>
                 {
-                    x.AddConsumer<KitchenBookingRequestedConsumer>()
-                        .Endpoint(cfg => cfg.Temporary = true);
+                    x.AddConsumer<KitchenBookingRequestedConsumer>().Endpoint(cfg => cfg.Temporary = true);
 
                     x.AddDelayedMessageScheduler();
 
-                    x.UsingRabbitMq((context, cfg) =>
+                    x.UsingRabbitMq((context, config) =>
                     {
-                        cfg.Host(
-                            host: config[$"{nameof(RabbitMQHostConfig)}:{RabbitMQHostConfigDefinition.HostName}"],
-                            virtualHost: config[$"{nameof(RabbitMQHostConfig)}:{RabbitMQHostConfigDefinition.VirtualHost}"],
-                            hostSettings =>
-                            {
-                                hostSettings.Username(config[$"{nameof(RabbitMQHostConfig)}:{RabbitMQHostConfigDefinition.UserName}"]);
-                                hostSettings.Password(config[$"{nameof(RabbitMQHostConfig)}:{RabbitMQHostConfigDefinition.Password}"]);
-                            });
+                        config.Host(host: rabbitMqConfig[RabbitMqHostSettingsKeys.Host],
+                                    virtualHost: rabbitMqConfig[RabbitMqHostSettingsKeys.VirtualHost],
+                                    hostSettings =>
+                                    {
+                                        hostSettings.Username(rabbitMqConfig[RabbitMqHostSettingsKeys.User]);
+                                        hostSettings.Password(rabbitMqConfig[RabbitMqHostSettingsKeys.Password]);
+                                    });
 
-                        cfg.UseDelayedMessageScheduler();
-                        cfg.UseInMemoryOutbox();
-                        cfg.ConfigureEndpoints(context);
+                        config.UseScheduledRedelivery(r => r.Intervals(TimeSpan.FromMinutes(10),
+                                                                       TimeSpan.FromMinutes(20),
+                                                                       TimeSpan.FromMinutes(30)));
+
+                        config.UseMessageRetry(r => r.Incremental(3, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(3)));
+
+                        config.UseDelayedMessageScheduler();
+                        config.UseInMemoryOutbox();
+                        config.ConfigureEndpoints(context);
                     });
                 });
 
@@ -55,7 +58,7 @@ public class Program
         return builder;
     }
 
-    public static IConfigurationRoot? GetConfigurationSection<T>() where T : class
+    private static IConfigurationRoot? GetConfigurationSection<T>() where T : class
         => new ConfigurationBuilder()
                 .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
                 .AddJsonFile("appsettings.json")

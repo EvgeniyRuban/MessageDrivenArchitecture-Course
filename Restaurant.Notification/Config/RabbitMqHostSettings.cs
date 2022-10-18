@@ -1,10 +1,10 @@
 ﻿namespace Restaurant.Notification;
 
-internal sealed class RabbitMQHostConfig
+internal sealed class RabbitMqHostSettings
 {
-    public string HostName { get; } = null!;
+    public string Host { get; } = null!;
     public string VirtualHost { get; } = null!;
-    public string UserName { get; } = null!;
+    public string User { get; } = null!;
     public string Password { get; } = null!;
     public ushort Port { get; }
 }

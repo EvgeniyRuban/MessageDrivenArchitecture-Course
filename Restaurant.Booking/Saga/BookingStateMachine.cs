@@ -9,26 +9,15 @@ public sealed class BookingStateMachine : MassTransitStateMachine<BookingState>
     {
         InstanceState(x => x.CurrentState);
 
-        Event(() => BookingRequested,
-            x =>
-                x.CorrelateById(context => context.Message.OrderId)
-                    .SelectId(context => context.Message.OrderId));
-
-        Event(() => TableBooked,
-            x =>
-                x.CorrelateById(context => context.Message.OrderId));
-
-        Event(() => KitchenReady,
-            x =>
-                x.CorrelateById(context => context.Message.OrderId));
-
-        Event(() => BookingRequestedFault,
-            x =>
-                x.CorrelateById(m => m.Message.Message.OrderId));
-
-        Event(() => GuestArrived,
-            x =>
-                x.CorrelateById(context => context.Message.OrderId));
+        Event(() => BookingRequested, x => x.CorrelateById(context => context.Message.OrderId)
+                                            .SelectId(context => context.Message.OrderId));
+        Event(() => TableBooked, x => x.CorrelateById(context => context.Message.OrderId));
+        Event(() => KitchenReady, x => x.CorrelateById(context => context.Message.OrderId));
+        Event(() => GuestArrived, x => x.CorrelateById(context => context.Message.OrderId));
+        Event(() => TableBookedFault, x => x.CorrelateById(context => context.Message.Message.OrderId));
+        Event(() => KitchenReadyFault, x => x.CorrelateById(context => context.Message.Message.OrderId));
+        Event(() => BookingRequestedFault, x => x.CorrelateById(context => context.Message.Message.OrderId));
+        Event(() => GuestArrivedFault, x => x.CorrelateById(context => context.Message.Message.OrderId));
 
         CompositeEvent(() => BookingApproved,
             x => x.ReadyEventStatus, KitchenReady, TableBooked);
@@ -39,7 +28,6 @@ public sealed class BookingStateMachine : MassTransitStateMachine<BookingState>
                 x.Delay = TimeSpan.FromSeconds(1);
                 x.Received = e => e.CorrelateById(context => context.Message.OrderId);
             });
-
         Schedule(() => GuestArrivalExpired,
             x => x.ExpirationId, x =>
             {
@@ -80,17 +68,14 @@ public sealed class BookingStateMachine : MassTransitStateMachine<BookingState>
             When(TableBooked)
                 .Then(context => context.Instance.TableId = context.Data.TableId),
 
-            When(BookingRequestedFault)
-                .Then(context => Console.WriteLine($"[Order: {context.Instance.OrderId}] - произошла ошибка."))
-                .Publish(context => (IBookingCancelled) new BookingCancelled(context.Instance.OrderId, context.Instance.TableId))
-                .Publish(context => (INotify)new Notify(context.Instance.OrderId,
-                                                        context.Instance.ClientId,
-                                                        "приносим извинения, стол забронировать не получилось"))
-                .Finalize(),
+            When(TableBookedFault).TransitionTo(BookingFault),
+            When(KitchenReadyFault).TransitionTo(BookingFault),
+            When(BookingRequestedFault).TransitionTo(BookingFault),
+            When(GuestArrivedFault).TransitionTo(BookingFault),
 
             When(BookingExpired.Received)
-                .Then(context => Console.WriteLine($"Отмена заказа {context.Instance.OrderId}."))
-                .Publish(context => new BookingCancelled(context.Instance.OrderId, context.Instance.TableId))
+                .Then(context => Console.WriteLine($"[Order: {context.Instance.OrderId}] - время брони истекло, отмена заказа."))
+                .Publish(context => (IBookingFaulted)new BookingFaulted(context.Instance.OrderId, context.Instance.TableId))
                 .Finalize()
         );
 
@@ -101,19 +86,30 @@ public sealed class BookingStateMachine : MassTransitStateMachine<BookingState>
                 .Finalize(),
 
             When(GuestArrivalExpired.Received)
-                .Then(context => Console.WriteLine($"[Order: {context.Message.OrderId}] - гость не пришел."))
-                .Publish(context => new BookingCancelled(context.Instance.OrderId, context.Instance.TableId))
-                .Publish(context => new Notify(context.Instance.OrderId,
+                .Then(context => Console.WriteLine($"[Order: {context.Instance.OrderId}] - гость не пришел."))
+                .Publish(context => (IBookingFaulted)new BookingFaulted(context.Instance.OrderId, context.Instance.TableId))
+                .Publish(context => (INotify)new Notify(context.Instance.OrderId,
                                                context.Instance.ClientId,
-                                               "ваша бронь снята по истечению времини"))
+                                               "ваша бронь снята по истечению времени"))
                 .Finalize()
         );
+
+        During(BookingFault,
+            When(BookingFault.Enter)
+                .Then(context => Console.WriteLine($"[Order: {context.Instance.OrderId}] - произошла ошибка."))
+                .Then(context => Console.WriteLine($"[Order: {context.Instance.OrderId}] - отмена заказа."))
+                .Publish(context => (IBookingFaulted)new BookingFaulted(context.Instance.OrderId, context.Instance.TableId))
+                .Publish(context => (INotify)new Notify(context.Instance.OrderId,
+                                                        context.Instance.ClientId,
+                                                        "приносим извинения, стол забронировать не получилось"))
+                .Finalize());
 
         SetCompletedWhenFinalized();
     }
 
     public State AwaitingBookingApproved { get; private set; }
     public State AwaitingGuestArrived { get; private set; }
+    public State BookingFault { get; private set; }
 
     public Event<ITableBooked> TableBooked { get; private set; }
     public Event<IKitchenReady> KitchenReady { get; private set; }
@@ -122,7 +118,10 @@ public sealed class BookingStateMachine : MassTransitStateMachine<BookingState>
 
     public Event BookingApproved { get; private set; }
 
+    public Event<Fault<ITableBooked>> TableBookedFault { get; private set; }
+    public Event<Fault<IKitchenReady>> KitchenReadyFault { get; private set; }
     public Event<Fault<IBookingRequested>> BookingRequestedFault { get; private set; }
+    public Event<Fault<IGuestArrived>> GuestArrivedFault { get; private set; }
 
     public Schedule<BookingState, IBookingExpired> BookingExpired { get; private set; }
     public Schedule<BookingState, IGuestArrivalExpired> GuestArrivalExpired { get; private set; }

@@ -1,6 +1,6 @@
 ﻿namespace Restaurant.Booking;
 
-public sealed class Table
+internal sealed class Table
 {
     public Table(Guid id, int seatsCount)
     {

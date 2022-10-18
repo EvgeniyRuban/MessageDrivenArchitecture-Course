@@ -3,7 +3,7 @@ using Restaurant.Messaging;
 
 namespace Restaurant.Kitchen.Consumers;
 
-public sealed class KitchenBookingRequestedConsumer : IConsumer<IBookingRequested>
+internal sealed class KitchenBookingRequestedConsumer : IConsumer<IBookingRequested>
 {
     private readonly Kitchen _kitchen;
 
