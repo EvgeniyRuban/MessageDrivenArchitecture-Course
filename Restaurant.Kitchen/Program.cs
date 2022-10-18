@@ -26,8 +26,7 @@ public class Program
             {
                 services.AddMassTransit(x =>
                 {
-                    x.AddConsumer<KitchenBookingRequestedConsumer>()
-                        .Endpoint(cfg => cfg.Temporary = true);
+                    x.AddConsumer<KitchenBookingRequestedConsumer>().Endpoint(cfg => cfg.Temporary = true);
 
                     x.AddDelayedMessageScheduler();
 
@@ -40,6 +39,12 @@ public class Program
                                         hostSettings.Username(rabbitMqConfig[RabbitMqHostSettingsKeys.User]);
                                         hostSettings.Password(rabbitMqConfig[RabbitMqHostSettingsKeys.Password]);
                                     });
+
+                        config.UseScheduledRedelivery(r => r.Intervals(TimeSpan.FromMinutes(10),
+                                                                       TimeSpan.FromMinutes(20),
+                                                                       TimeSpan.FromMinutes(30)));
+
+                        config.UseMessageRetry(r => r.Incremental(3, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(3)));
 
                         config.UseDelayedMessageScheduler();
                         config.UseInMemoryOutbox();

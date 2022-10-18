@@ -11,7 +11,6 @@ internal sealed class BookingApprovedConsumer : IConsumer<IBookingApproved>
         var randomGuestArrivalInterval = TimeSpan.FromSeconds(new Random().Next(range.Item1, range.Item2 + 1));
 
         await Task.Delay(randomGuestArrivalInterval);
-
         context.Publish<IGuestArrived>(new GuestArrived(context.Message.OrderId));
     }
 }

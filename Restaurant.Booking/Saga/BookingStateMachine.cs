@@ -9,38 +9,15 @@ public sealed class BookingStateMachine : MassTransitStateMachine<BookingState>
     {
         InstanceState(x => x.CurrentState);
 
-        Event(() => BookingRequested,
-            x =>
-                x.CorrelateById(context => context.Message.OrderId)
-                    .SelectId(context => context.Message.OrderId));
-
-        Event(() => TableBooked,
-            x =>
-                x.CorrelateById(context => context.Message.OrderId));
-
-        Event(() => KitchenReady,
-            x =>
-                x.CorrelateById(context => context.Message.OrderId));
-
-        Event(() => GuestArrived,
-            x =>
-                x.CorrelateById(context => context.Message.OrderId));
-
-        Event(() => TableBookedFault,
-            x =>
-                x.CorrelateById(m => m.Message.Message.OrderId));
-
-        Event(() => KitchenReadyFault,
-            x =>
-                x.CorrelateById(m => m.Message.Message.OrderId));
-
-        Event(() => BookingRequestedFault,
-            x =>
-                x.CorrelateById(m => m.Message.Message.OrderId));
-
-        Event(() => GuestArrivedFault,
-            x =>
-                x.CorrelateById(m => m.Message.Message.OrderId));
+        Event(() => BookingRequested, x => x.CorrelateById(context => context.Message.OrderId)
+                                            .SelectId(context => context.Message.OrderId));
+        Event(() => TableBooked, x => x.CorrelateById(context => context.Message.OrderId));
+        Event(() => KitchenReady, x => x.CorrelateById(context => context.Message.OrderId));
+        Event(() => GuestArrived, x => x.CorrelateById(context => context.Message.OrderId));
+        Event(() => TableBookedFault, x => x.CorrelateById(context => context.Message.Message.OrderId));
+        Event(() => KitchenReadyFault, x => x.CorrelateById(context => context.Message.Message.OrderId));
+        Event(() => BookingRequestedFault, x => x.CorrelateById(context => context.Message.Message.OrderId));
+        Event(() => GuestArrivedFault, x => x.CorrelateById(context => context.Message.Message.OrderId));
 
         CompositeEvent(() => BookingApproved,
             x => x.ReadyEventStatus, KitchenReady, TableBooked);
@@ -51,7 +28,6 @@ public sealed class BookingStateMachine : MassTransitStateMachine<BookingState>
                 x.Delay = TimeSpan.FromSeconds(1);
                 x.Received = e => e.CorrelateById(context => context.Message.OrderId);
             });
-
         Schedule(() => GuestArrivalExpired,
             x => x.ExpirationId, x =>
             {
@@ -92,33 +68,14 @@ public sealed class BookingStateMachine : MassTransitStateMachine<BookingState>
             When(TableBooked)
                 .Then(context => context.Instance.TableId = context.Data.TableId),
 
-            When(TableBookedFault)
-                .Then(context => Console.WriteLine($"[Order: {context.Instance.OrderId}] - произошла ошибка."))
-                .Publish(context => (IBookingCancelled) new BookingCancelled(context.Instance.OrderId, context.Instance.TableId))
-                .Publish(context => (INotify)new Notify(context.Instance.OrderId,
-                                                        context.Instance.ClientId,
-                                                        "приносим извинения, стол забронировать не получилось"))
-                .Finalize(),
-
-            When(KitchenReadyFault)
-                .Then(context => Console.WriteLine($"[Order: {context.Instance.OrderId}] - произошла ошибка."))
-                .Publish(context => (IBookingCancelled)new BookingCancelled(context.Instance.OrderId, context.Instance.TableId))
-                .Publish(context => (INotify)new Notify(context.Instance.OrderId,
-                                                        context.Instance.ClientId,
-                                                        "приносим извинения, стол забронировать не получилось"))
-            .Finalize(),
-
-            When(BookingRequestedFault)
-                .Then(context => Console.WriteLine($"[Order: {context.Instance.OrderId}] - произошла ошибка."))
-                .Publish(context => (IBookingCancelled) new BookingCancelled(context.Instance.OrderId, context.Instance.TableId))
-                .Publish(context => (INotify)new Notify(context.Instance.OrderId,
-                                                        context.Instance.ClientId,
-                                                        "приносим извинения, стол забронировать не получилось"))
-                .Finalize(),
+            When(TableBookedFault).TransitionTo(BookingFault),
+            When(KitchenReadyFault).TransitionTo(BookingFault),
+            When(BookingRequestedFault).TransitionTo(BookingFault),
+            When(GuestArrivedFault).TransitionTo(BookingFault),
 
             When(BookingExpired.Received)
-                .Then(context => Console.WriteLine($"[Order: {context.Instance.OrderId}] - отмена заказа."))
-                .Publish(context => new BookingCancelled(context.Instance.OrderId, context.Instance.TableId))
+                .Then(context => Console.WriteLine($"[Order: {context.Instance.OrderId}] - время брони истекло, отмена заказа."))
+                .Publish(context => (IBookingFaulted)new BookingFaulted(context.Instance.OrderId, context.Instance.TableId))
                 .Finalize()
         );
 
@@ -130,26 +87,29 @@ public sealed class BookingStateMachine : MassTransitStateMachine<BookingState>
 
             When(GuestArrivalExpired.Received)
                 .Then(context => Console.WriteLine($"[Order: {context.Instance.OrderId}] - гость не пришел."))
-                .Publish(context => new BookingCancelled(context.Instance.OrderId, context.Instance.TableId))
-                .Publish(context => new Notify(context.Instance.OrderId,
+                .Publish(context => (IBookingFaulted)new BookingFaulted(context.Instance.OrderId, context.Instance.TableId))
+                .Publish(context => (INotify)new Notify(context.Instance.OrderId,
                                                context.Instance.ClientId,
                                                "ваша бронь снята по истечению времени"))
-                .Finalize(),
+                .Finalize()
+        );
 
-            When(GuestArrivedFault)
+        During(BookingFault,
+            When(BookingFault.Enter)
                 .Then(context => Console.WriteLine($"[Order: {context.Instance.OrderId}] - произошла ошибка."))
-                .Publish(context => (IBookingCancelled) new BookingCancelled(context.Instance.OrderId, context.Instance.TableId))
+                .Then(context => Console.WriteLine($"[Order: {context.Instance.OrderId}] - отмена заказа."))
+                .Publish(context => (IBookingFaulted)new BookingFaulted(context.Instance.OrderId, context.Instance.TableId))
                 .Publish(context => (INotify)new Notify(context.Instance.OrderId,
                                                         context.Instance.ClientId,
                                                         "приносим извинения, стол забронировать не получилось"))
-                .Finalize()
-        );
+                .Finalize());
 
         SetCompletedWhenFinalized();
     }
 
     public State AwaitingBookingApproved { get; private set; }
     public State AwaitingGuestArrived { get; private set; }
+    public State BookingFault { get; private set; }
 
     public Event<ITableBooked> TableBooked { get; private set; }
     public Event<IKitchenReady> KitchenReady { get; private set; }

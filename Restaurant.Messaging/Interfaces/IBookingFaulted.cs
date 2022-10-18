@@ -1,6 +1,6 @@
 ﻿namespace Restaurant.Messaging;
 
-public interface IBookingCancelled
+public interface IBookingFaulted
 {
     public Guid OrderId { get; }
     public Guid TableId { get; }

@@ -27,23 +27,11 @@ public class Program
             {
                 services.AddMassTransit(x =>
                 {
-                    x.AddConsumer(GetGenericConsumerConfigurator<BookingRequestedConsumer>())
-                        .Endpoint(cfg => cfg.Temporary = true);
+                    x.AddConsumers(typeof(BookingRequestedConsumer));
 
-                    x.AddConsumer(GetGenericConsumerConfigurator<BookingApprovedConsumer>())
-                        .Endpoint(cfg => cfg.Temporary = true);
-
-                    x.AddConsumer(GetGenericConsumerConfigurator<BookingCancelledConsumer>())
-                        .Endpoint(cfg => cfg.Temporary = true);
-
-                    x.AddConsumer(GetGenericConsumerConfigurator<BookingRequestedFaultConsumer>())
-                        .Endpoint(cfg => cfg.Temporary = true);
-
-                    x.AddConsumer(GetGenericConsumerConfigurator<KitchenReadyFaultConsumer>())
-                        .Endpoint(cfg => cfg.Temporary = true);
-
-                    x.AddConsumer(GetGenericConsumerConfigurator<TableBookedFaultConsumer>())
-                        .Endpoint(cfg => cfg.Temporary = true);
+                    x.AddConsumer<BookingRequestedConsumer>().Endpoint(config => config.Temporary = true);
+                    x.AddConsumer<BookingApprovedConsumer>().Endpoint(config => config.Temporary = true);
+                    x.AddConsumer<BookingFaultedConsumer>().Endpoint(config => config.Temporary = true);
 
                     x.AddSagaStateMachine<BookingStateMachine, BookingState>()
                             .Endpoint(e => e.Temporary = true)
@@ -51,9 +39,9 @@ public class Program
 
                     x.AddDelayedMessageScheduler();
 
-                    x.UsingRabbitMq((context, cfg) =>
+                    x.UsingRabbitMq((context, config) =>
                     {
-                        cfg.Host(
+                        config.Host(
                             host: rabbitMqConfig[RabbitMqHostConfigKeys.Host],
                             virtualHost: rabbitMqConfig[RabbitMqHostConfigKeys.VirtualHost],
                             hostSettings =>
@@ -62,9 +50,15 @@ public class Program
                                 hostSettings.Password(rabbitMqConfig[RabbitMqHostConfigKeys.Password]);
                             });
 
-                        cfg.UseDelayedMessageScheduler();
-                        cfg.UseInMemoryOutbox();
-                        cfg.ConfigureEndpoints(context);
+                        config.UseScheduledRedelivery(r => r.Intervals(TimeSpan.FromMinutes(10),
+                                                                       TimeSpan.FromMinutes(20),
+                                                                       TimeSpan.FromMinutes(30)));
+
+                        config.UseMessageRetry(r => r.Incremental(3, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(3)));
+
+                        config.UseDelayedMessageScheduler();
+                        config.UseInMemoryOutbox();
+                        config.ConfigureEndpoints(context);
                     });
                 });
 

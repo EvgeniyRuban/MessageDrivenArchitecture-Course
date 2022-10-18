@@ -19,7 +19,7 @@ internal class Program
 
     private static IHostBuilder CreateHostBuilder(string[] args)
     {
-        var config = GetConfigurationSection<RabbitMqHostSettings>();
+        var rabbitMqConfig = GetConfigurationSection<RabbitMqHostSettings>();
 
         var builder = 
         Host.CreateDefaultBuilder(args)
@@ -27,21 +27,27 @@ internal class Program
             {
                 services.AddMassTransit(x =>
                 {
-                    x.AddConsumer<NotifyConsumer>()
-                        .Endpoint(cfg => cfg.Temporary = true);
+                    x.AddConsumer<NotifyConsumer>().Endpoint(cfg => cfg.Temporary = true);
 
-                    x.UsingRabbitMq((context, cfg) =>
+                    x.UsingRabbitMq((context, config) =>
                     {
-                        cfg.Host(
-                            host: config[RabbitMqHostSettingsKeys.Host],
-                            virtualHost: config[RabbitMqHostSettingsKeys.VirtualHost],
+                        config.Host(
+                            host: rabbitMqConfig[RabbitMqHostSettingsKeys.Host],
+                            virtualHost: rabbitMqConfig[RabbitMqHostSettingsKeys.VirtualHost],
                             hostSettings =>
                             {
-                                hostSettings.Username(config[RabbitMqHostSettingsKeys.User]);
-                                hostSettings.Password(config[RabbitMqHostSettingsKeys.Password]);
+                                hostSettings.Username(rabbitMqConfig[RabbitMqHostSettingsKeys.User]);
+                                hostSettings.Password(rabbitMqConfig[RabbitMqHostSettingsKeys.Password]);
                             });
 
-                        cfg.ConfigureEndpoints(context);
+                        config.UseScheduledRedelivery(r => r.Intervals(TimeSpan.FromMinutes(10),
+                                                                       TimeSpan.FromMinutes(20),
+                                                                       TimeSpan.FromMinutes(30)));
+
+                        config.UseMessageRetry(r => r.Incremental(3, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(3)));
+
+                        config.UseInMemoryOutbox();
+                        config.ConfigureEndpoints(context);
                     });
                 });
 
