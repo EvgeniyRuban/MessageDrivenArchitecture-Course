@@ -5,34 +5,33 @@ namespace Restaurant.Booking.Consumers;
 
 internal sealed class BookingRequestedConsumer : IConsumer<IBookingRequested>
 {
+    private readonly IProcessedMessagesRepository _processedMessagesRepository;
     private readonly Restaurant _restaurant;
-    private readonly IInMemoryRepository<BookingRequestedModel> _repository;
 
-    public BookingRequestedConsumer(Restaurant restaurant, IInMemoryRepository<BookingRequestedModel> repositiry)
+    public BookingRequestedConsumer(Restaurant restaurant, IProcessedMessagesRepository processedMessagesRepository)
     {
         ArgumentNullException.ThrowIfNull(restaurant, nameof(restaurant));
-        ArgumentNullException.ThrowIfNull(repositiry, nameof(repositiry));
+        ArgumentNullException.ThrowIfNull(processedMessagesRepository, nameof(processedMessagesRepository));
 
         _restaurant = restaurant;
-        _repository = repositiry;
+        _processedMessagesRepository = processedMessagesRepository;
     }
 
     public async Task Consume(ConsumeContext<IBookingRequested> context)
     {
-        var model = _repository.GetAll().FirstOrDefault(i => i.OrderId == context.Message.OrderId);
+        var processedMessage = new ProcessedMessage() 
+        { 
+            OrderId = context.Message.OrderId, 
+            MessageId = (Guid)context.MessageId
+        };
 
-        if(model is not null && model.CheckMessageId(context.MessageId.ToString()))
+        if(await _processedMessagesRepository.Contain(processedMessage))
         {
-            Console.WriteLine($"[OrderId: {context.Message.OrderId}] - dublicate message sending from bookingrequested consumer was catched.");
             return;
-            
         }
 
-        _repository.Add(new(context.Message.OrderId,
-                            context.Message.ClientId,
-                            context.Message.ArriveVia,
-                            context.Message.CreationDate,
-                            context.MessageId.ToString()));
+        await _processedMessagesRepository.Add(processedMessage);
+
 
         var bookedTableId = await _restaurant.BookTableAsync(new Random().Next((int)NumberOfSeats.Twelve + 1));
 

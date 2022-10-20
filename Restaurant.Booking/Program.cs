@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Configuration;
+using Microsoft.EntityFrameworkCore;
 using MassTransit;
 using Restaurant.Booking.Consumers;
 
@@ -19,16 +20,28 @@ public class Program
 
     private static IHostBuilder CreateHostBuilder(string[] args)
     {
-        var rabbitMqConfig = GetConfigurationSection<RabbitMqHostConfig>();
+        var rabbitMqConfig = GetConfigurationSection<RabbitMqHostSettings>();
+        var connectionStringConfig = GetConfigurationSection<SqlServerSettings>();
+
+        var connectionStringComponents = new SqlServerConnectionStringComponents()
+        {
+            Server = connectionStringConfig[SqlServerConnectionComponentsKeys.Server],
+            Database = connectionStringConfig[SqlServerConnectionComponentsKeys.Database],
+            UserId = connectionStringConfig[SqlServerConnectionComponentsKeys.UserId],
+            Password = connectionStringConfig[SqlServerConnectionComponentsKeys.Password],
+        };
 
         var builder = 
         Host.CreateDefaultBuilder(args)
             .ConfigureServices((context, services) =>
             {
+                services.AddDbContext<RestaurantBookingDbContext>(options =>
+                {
+                    options.UseSqlServer(connectionStringComponents.Combine());
+                });
+
                 services.AddMassTransit(x =>
                 {
-                    x.AddConsumers(typeof(BookingRequestedConsumer));
-
                     x.AddConsumer<BookingRequestedConsumer>().Endpoint(config => config.Temporary = true);
                     x.AddConsumer<BookingApprovedConsumer>().Endpoint(config => config.Temporary = true);
                     x.AddConsumer<BookingFaultedConsumer>().Endpoint(config => config.Temporary = true);
@@ -42,12 +55,12 @@ public class Program
                     x.UsingRabbitMq((context, config) =>
                     {
                         config.Host(
-                            host: rabbitMqConfig[RabbitMqHostConfigKeys.Host],
-                            virtualHost: rabbitMqConfig[RabbitMqHostConfigKeys.VirtualHost],
+                            host: rabbitMqConfig[RabbitMqHostSettingsKeys.Host],
+                            virtualHost: rabbitMqConfig[RabbitMqHostSettingsKeys.VirtualHost],
                             hostSettings =>
                             {
-                                hostSettings.Username(rabbitMqConfig[RabbitMqHostConfigKeys.User]);
-                                hostSettings.Password(rabbitMqConfig[RabbitMqHostConfigKeys.Password]);
+                                hostSettings.Username(rabbitMqConfig[RabbitMqHostSettingsKeys.User]);
+                                hostSettings.Password(rabbitMqConfig[RabbitMqHostSettingsKeys.Password]);
                             });
 
                         config.UseScheduledRedelivery(r => r.Intervals(TimeSpan.FromMinutes(10),
@@ -62,10 +75,10 @@ public class Program
                     });
                 });
 
-                services.AddSingleton<IInMemoryRepository<BookingRequestedModel>, InMemoryRepository<BookingRequestedModel>>();
                 services.AddSingleton<Restaurant>();
                 services.AddTransient<BookingState>();
                 services.AddTransient<BookingStateMachine>();
+                services.AddScoped<IProcessedMessagesRepository, ProcessedMessagesRepository>();
 
                 services.AddHostedService<WorkerBackgroundService>();
             });
@@ -79,15 +92,4 @@ public class Program
                 .AddJsonFile("appsettings.json")
                 .AddUserSecrets<T>()
                 .Build();
-
-    private static Action<IConsumerConfigurator<TConsumer>> GetGenericConsumerConfigurator<TConsumer>() 
-        where TConsumer : class
-        => config =>
-        {
-            config.UseScheduledRedelivery(r => r.Intervals(TimeSpan.FromSeconds(10),
-                                                           TimeSpan.FromSeconds(20),
-                                                           TimeSpan.FromSeconds(30)));
-
-            config.UseMessageRetry(r => r.Incremental(3, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(3)));
-        };
 }

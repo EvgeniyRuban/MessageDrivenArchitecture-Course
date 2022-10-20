@@ -1,6 +1,6 @@
 ﻿namespace Restaurant.Booking;
 
-internal sealed class RabbitMqHostConfig
+internal sealed class RabbitMqHostSettings
 {
     public string Host { get; } = null!;
     public string VirtualHost { get; } = null!;

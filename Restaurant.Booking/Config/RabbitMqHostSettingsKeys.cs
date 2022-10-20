@@ -1,6 +1,6 @@
 ﻿namespace Restaurant.Booking;
 
-internal struct RabbitMqHostConfigKeys
+internal struct RabbitMqHostSettingsKeys
 {
     public const string Host = $"{_section}:Host";
     public const string VirtualHost = $"{_section}:VirtualHost";
