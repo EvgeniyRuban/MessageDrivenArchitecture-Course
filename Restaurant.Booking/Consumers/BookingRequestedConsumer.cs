@@ -19,19 +19,18 @@ internal sealed class BookingRequestedConsumer : IConsumer<IBookingRequested>
 
     public async Task Consume(ConsumeContext<IBookingRequested> context)
     {
-        var processedMessage = new ProcessedMessage() 
-        { 
-            OrderId = context.Message.OrderId, 
-            MessageId = (Guid)context.MessageId
+        var message = new ProcessedMessage()
+        {
+            OrderId = context.Message.OrderId,
+            MessageId = (Guid)context.MessageId,
         };
 
-        if(await _processedMessagesRepository.Contain(processedMessage))
+        if (await _processedMessagesRepository.Contain(message))
         {
             return;
         }
 
-        await _processedMessagesRepository.Add(processedMessage);
-
+        await _processedMessagesRepository.Add(message);
 
         var bookedTableId = await _restaurant.BookTableAsync(new Random().Next((int)NumberOfSeats.Twelve + 1));
 

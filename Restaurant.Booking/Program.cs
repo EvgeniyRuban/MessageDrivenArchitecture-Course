@@ -21,7 +21,7 @@ public class Program
     private static IHostBuilder CreateHostBuilder(string[] args)
     {
         var rabbitMqConfig = GetConfigurationSection<RabbitMqHostSettings>();
-        var connectionStringConfig = GetConfigurationSection<SqlServerSettings>();
+        var connectionStringConfig = GetConfigurationSection<SqlServerConnectionStringComponents>();
 
         var connectionStringComponents = new SqlServerConnectionStringComponents()
         {

@@ -23,7 +23,7 @@ internal class ProcessedMessagesRepository : IProcessedMessagesRepository
     public async Task Delete(Guid orderId)
     {
         var result = await _dbContext.ProcessedMessages.FirstOrDefaultAsync(m => m.OrderId == orderId);
-        if (result == null)
+        if (result is not null)
         {
             _dbContext.ProcessedMessages.Remove(result);
             await _dbContext.SaveChangesAsync();
