@@ -62,6 +62,7 @@ public class Program
                     });
                 });
 
+                services.AddSingleton<IInMemoryRepository<BookingRequestedModel>, InMemoryRepository<BookingRequestedModel>>();
                 services.AddSingleton<Restaurant>();
                 services.AddTransient<BookingState>();
                 services.AddTransient<BookingStateMachine>();
