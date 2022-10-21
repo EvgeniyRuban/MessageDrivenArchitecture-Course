@@ -11,6 +11,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tasks", "tasks", "{3589FE9D
 		tasks\task-4.txt = tasks\task-4.txt
 		tasks\task-5.txt = tasks\task-5.txt
 		tasks\task-6.txt = tasks\task-6.txt
+		tasks\task-7.txt = tasks\task-7.txt
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Restaurant.Messaging", "Restaurant.Messaging\Restaurant.Messaging.csproj", "{F94DCBE1-162B-40F4-A137-E2A2082CD346}"
