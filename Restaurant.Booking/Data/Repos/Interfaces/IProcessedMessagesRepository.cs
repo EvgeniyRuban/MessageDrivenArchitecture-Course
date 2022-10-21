@@ -4,5 +4,5 @@ internal interface IProcessedMessagesRepository
 {
     Task<bool> Contain(ProcessedMessage message);
     Task Add(ProcessedMessage message);
-    Task Delete(Guid orderId);
+    Task Delete(ProcessedMessage message);
 }

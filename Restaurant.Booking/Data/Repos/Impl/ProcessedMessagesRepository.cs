@@ -20,13 +20,10 @@ internal class ProcessedMessagesRepository : IProcessedMessagesRepository
     public async Task<bool> Contain(ProcessedMessage message)
         => await _dbContext.ProcessedMessages.FirstOrDefaultAsync(m => m.OrderId == message.OrderId
                                                                     && m.MessageId == message.MessageId) is not null;
-    public async Task Delete(Guid orderId)
+    public async Task Delete(ProcessedMessage message)
     {
-        var result = await _dbContext.ProcessedMessages.FirstOrDefaultAsync(m => m.OrderId == orderId);
-        if (result is not null)
-        {
-            _dbContext.ProcessedMessages.Remove(result);
-            await _dbContext.SaveChangesAsync();
-        }
+        ArgumentNullException.ThrowIfNull(message, nameof(message));
+        _dbContext.ProcessedMessages.Remove(message);
+        await _dbContext.SaveChangesAsync();
     }
 }
