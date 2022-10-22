@@ -3,23 +3,27 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using MassTransit;
 using Restaurant.Notification.Consumers;
+using MassTransit.Audit;
 
 namespace Restaurant.Notification;
 
 internal class Program
 {
+    private static IConfiguration Configuration { get; set; }
+
     private static void Main(string[] args)
     {
+        Configuration = BuildConfiguration();
+
         Console.OutputEncoding = System.Text.Encoding.UTF8;
-        Console.Title = GetConfigurationSection<AppSettings>()
-            [AppSettingsKeys.ConsoleTitle];
+        Console.Title = Configuration.GetSection(nameof(AppSettings)).Get<AppSettings>().ConsoleTitle;
 
         CreateHostBuilder(args).Build().Run();
     }
 
     private static IHostBuilder CreateHostBuilder(string[] args)
     {
-        var rabbitMqConfig = GetConfigurationSection<RabbitMqHostSettings>();
+        var rabbitMqConfig = Configuration.GetSection(nameof(RabbitMqSettings)).Get<RabbitMqSettings>();
 
         var builder = 
         Host.CreateDefaultBuilder(args)
@@ -27,17 +31,20 @@ internal class Program
             {
                 services.AddMassTransit(x =>
                 {
+                    x.AddSingleton<IMessageAuditStore, AuditStore>();
+                    var auditStore = services.BuildServiceProvider().GetService<IMessageAuditStore>();
+
                     x.AddConsumer<NotifyConsumer>().Endpoint(cfg => cfg.Temporary = true);
 
                     x.UsingRabbitMq((context, config) =>
                     {
                         config.Host(
-                            host: rabbitMqConfig[RabbitMqHostSettingsKeys.Host],
-                            virtualHost: rabbitMqConfig[RabbitMqHostSettingsKeys.VirtualHost],
+                            host: rabbitMqConfig.Host,
+                            virtualHost: rabbitMqConfig.VirtualHost,
                             hostSettings =>
                             {
-                                hostSettings.Username(rabbitMqConfig[RabbitMqHostSettingsKeys.User]);
-                                hostSettings.Password(rabbitMqConfig[RabbitMqHostSettingsKeys.Password]);
+                                hostSettings.Username(rabbitMqConfig.User);
+                                hostSettings.Password(rabbitMqConfig.Password);
                             });
 
                         config.UseScheduledRedelivery(r => r.Intervals(TimeSpan.FromMinutes(10),
@@ -48,6 +55,9 @@ internal class Program
 
                         config.UseInMemoryOutbox();
                         config.ConfigureEndpoints(context);
+
+                        config.ConnectSendAuditObservers(auditStore);
+                        config.ConnectConsumeAuditObserver(auditStore);
                     });
                 });
 
@@ -57,10 +67,10 @@ internal class Program
         return builder;
     }
 
-    private static IConfigurationRoot? GetConfigurationSection<T>() where T : class
+    private static IConfiguration BuildConfiguration()
         => new ConfigurationBuilder()
-                .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
-                .AddJsonFile("appsettings.json")
-                .AddUserSecrets<T>()
-                .Build();
+            .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
+            .AddJsonFile("appsettings.json")
+            .AddUserSecrets<Program>()
+            .Build();
 }

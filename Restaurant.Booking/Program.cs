@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using MassTransit;
+using MassTransit.Audit;
 using Restaurant.Booking;
 using Restaurant.Booking.Consumers;
 
@@ -15,6 +16,9 @@ builder.Services.AddDbContext<RestaurantBookingDbContext>(options =>
 
 builder.Services.AddMassTransit((x =>
 {
+    x.AddSingleton<IMessageAuditStore, AuditStore>();
+    var auditStore = builder.Services.BuildServiceProvider().GetService<IMessageAuditStore>();
+
     x.AddConsumer<BookingRequestedConsumer>().Endpoint(config => config.Temporary = true);
     x.AddConsumer<BookingApprovedConsumer>().Endpoint(config => config.Temporary = true);
     x.AddConsumer<BookingFaultedConsumer>().Endpoint(config => config.Temporary = true);
@@ -47,6 +51,9 @@ builder.Services.AddMassTransit((x =>
         config.UseDelayedMessageScheduler();
         config.UseInMemoryOutbox();
         config.ConfigureEndpoints(context);
+
+        config.ConnectSendAuditObservers(auditStore);
+        config.ConnectConsumeAuditObserver(auditStore);
     });
 }));
 
