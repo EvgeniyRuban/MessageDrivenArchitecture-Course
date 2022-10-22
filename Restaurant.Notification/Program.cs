@@ -4,6 +4,7 @@ using Microsoft.Extensions.Hosting;
 using MassTransit;
 using Restaurant.Notification.Consumers;
 using MassTransit.Audit;
+using Serilog;
 
 namespace Restaurant.Notification;
 
@@ -27,6 +28,10 @@ internal class Program
 
         var builder = 
         Host.CreateDefaultBuilder(args)
+            .UseSerilog((context, services, config) =>
+            {
+                config.ReadFrom.ConfigurationSection(Configuration.GetSection(nameof(Serilog)));
+            })
             .ConfigureServices((hostContext, services) =>
             {
                 services.AddMassTransit(x =>

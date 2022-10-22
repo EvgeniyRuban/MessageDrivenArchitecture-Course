@@ -5,8 +5,13 @@ namespace Restaurant.Booking;
 
 public sealed class BookingStateMachine : MassTransitStateMachine<BookingState>
 {
-    public BookingStateMachine()
+    private readonly ILogger _logger;
+
+    public BookingStateMachine(ILogger<BookingStateMachine> logger)
     {
+        ArgumentNullException.ThrowIfNull(logger, nameof(logger));
+        _logger = logger;
+
         InstanceState(x => x.CurrentState);
 
         Event(() => BookingRequested, x => x.CorrelateById(context => context.Message.OrderId)
@@ -43,7 +48,7 @@ public sealed class BookingStateMachine : MassTransitStateMachine<BookingState>
                     context.Instance.OrderId = context.Data.OrderId;
                     context.Instance.ClientId = context.Data.ClientId;
                     context.Instance.GuestArrivalVia = context.Data.ArriveVia;
-                    Console.WriteLine($"[Order: {context.Data.OrderId}] - ожидается подтвеждения брони.");
+                    _logger.LogInformation("Booking machine state transisted in [AwaitingBookingApproved] state.");
                 })
                 .Schedule(BookingExpired,
                     context => new BookingExpired(context.Instance),
@@ -74,7 +79,7 @@ public sealed class BookingStateMachine : MassTransitStateMachine<BookingState>
             When(GuestArrivedFault).TransitionTo(BookingFault),
 
             When(BookingExpired.Received)
-                .Then(context => Console.WriteLine($"[Order: {context.Instance.OrderId}] - время брони истекло, отмена заказа."))
+                .Then(context => _logger.LogInformation("[Order: {orderId}] - booking expired.", context.Instance.OrderId))
                 .Publish(context => (IBookingFaulted)new BookingFaulted(context.Instance.OrderId, context.Instance.TableId))
                 .Finalize()
         );
@@ -82,11 +87,11 @@ public sealed class BookingStateMachine : MassTransitStateMachine<BookingState>
         During(AwaitingGuestArrived,
             When(GuestArrived)
                 .Unschedule(GuestArrivalExpired)
-                .Then(context => Console.WriteLine($"[Order: {context.Instance.OrderId}] - гость прибыл."))
+                .Then(context => _logger.LogInformation("[Order: {orderId}] - guest arrived.", context.Instance.OrderId))
                 .Finalize(),
 
             When(GuestArrivalExpired.Received)
-                .Then(context => Console.WriteLine($"[Order: {context.Instance.OrderId}] - гость не пришел."))
+                .Then(context => _logger.LogInformation("[Order: {orderId}] - guest didn't arrive.", context.Instance.OrderId))
                 .Publish(context => (IBookingFaulted)new BookingFaulted(context.Instance.OrderId, context.Instance.TableId))
                 .Publish(context => (INotify)new Notify(context.Instance.OrderId,
                                                context.Instance.ClientId,
@@ -96,8 +101,8 @@ public sealed class BookingStateMachine : MassTransitStateMachine<BookingState>
 
         During(BookingFault,
             When(BookingFault.Enter)
-                .Then(context => Console.WriteLine($"[Order: {context.Instance.OrderId}] - произошла ошибка."))
-                .Then(context => Console.WriteLine($"[Order: {context.Instance.OrderId}] - отмена заказа."))
+                .Then(context => _logger.LogInformation("[Order: {orderId}] - error happend.", context.Instance.OrderId))
+                .Then(context => _logger.LogInformation("[Order: {orderId}] - booking cancelled.", context.Instance.OrderId))
                 .Publish(context => (IBookingFaulted)new BookingFaulted(context.Instance.OrderId, context.Instance.TableId))
                 .Publish(context => (INotify)new Notify(context.Instance.OrderId,
                                                         context.Instance.ClientId,

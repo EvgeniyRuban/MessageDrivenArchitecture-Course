@@ -3,6 +3,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Configuration;
 using MassTransit;
 using MassTransit.Audit;
+using Serilog;
 using Restaurant.Kitchen.Consumers;
 
 namespace Restaurant.Kitchen;
@@ -17,7 +18,7 @@ public class Program
 
         Console.OutputEncoding = System.Text.Encoding.UTF8;
         Console.Title = Configuration.GetSection(nameof(AppSettings)).Get<AppSettings>().ConsoleTitle;
-        
+
         CreateHostBuilder(args).Build().Run();
     }
 
@@ -27,6 +28,10 @@ public class Program
 
         var builder =
         Host.CreateDefaultBuilder(args)
+            .UseSerilog((context, services, config) =>
+            {
+                config.ReadFrom.ConfigurationSection(Configuration.GetSection(nameof(Serilog)));
+            })
             .ConfigureServices((hostContext, services) =>
             {
                 services.AddMassTransit(x =>

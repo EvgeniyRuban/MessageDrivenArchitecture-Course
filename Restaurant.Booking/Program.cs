@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using MassTransit;
 using MassTransit.Audit;
+using Serilog;
 using Restaurant.Booking;
 using Restaurant.Booking.Consumers;
 
@@ -13,6 +14,11 @@ Console.Title = builder.Configuration.GetSection(nameof(AppSettings)).Get<AppSet
 
 builder.Services.AddDbContext<RestaurantBookingDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString(ConnectionStringsKeys.SqlServer)));
+
+builder.Host.UseSerilog((context, services) =>
+{
+    services.ReadFrom.Configuration(context.Configuration);
+});
 
 builder.Services.AddMassTransit((x =>
 {
@@ -61,6 +67,7 @@ builder.Services.AddSingleton<Restaurant.Booking.Restaurant>();
 builder.Services.AddTransient<BookingState>();
 builder.Services.AddTransient<BookingStateMachine>();
 builder.Services.AddScoped<IProcessedMessagesRepository, ProcessedMessagesRepository>();
+
 builder.Services.AddHostedService<WorkerBackgroundService>();
 
 var app = builder.Build();
