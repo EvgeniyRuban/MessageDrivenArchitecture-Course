@@ -1,95 +1,60 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Configuration;
 using Microsoft.EntityFrameworkCore;
 using MassTransit;
+using Restaurant.Booking;
 using Restaurant.Booking.Consumers;
 
-namespace Restaurant.Booking;
+var builder = WebApplication.CreateBuilder(args);
 
-public class Program
+builder.Services.AddControllers();
+
+Console.OutputEncoding = System.Text.Encoding.UTF8; 
+Console.Title = builder.Configuration.GetSection(nameof(AppSettings)).Get<AppSettings>().ConsoleTitle;
+
+builder.Services.AddDbContext<RestaurantBookingDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString(ConnectionStringsKeys.SqlServer)));
+
+builder.Services.AddMassTransit((x =>
 {
-    public static void Main(string[] args)
+    x.AddConsumer<BookingRequestedConsumer>().Endpoint(config => config.Temporary = true);
+    x.AddConsumer<BookingApprovedConsumer>().Endpoint(config => config.Temporary = true);
+    x.AddConsumer<BookingFaultedConsumer>().Endpoint(config => config.Temporary = true);
+
+    x.AddSagaStateMachine<BookingStateMachine, BookingState>()
+            .Endpoint(e => e.Temporary = true)
+            .InMemoryRepository();
+
+    x.AddDelayedMessageScheduler();
+
+    x.UsingRabbitMq((context, config) =>
     {
-        Console.OutputEncoding = System.Text.Encoding.UTF8;
-        Console.Title = GetConfigurationSection<AppSettings>()
-            [AppSettingsKeys.ConsoleTitle];
+        var rabbitMqConfig = builder.Configuration.GetSection(nameof(RabbitMqSettings)).Get<RabbitMqSettings>();
 
-        CreateHostBuilder(args).Build().Run();
-    }
-
-    private static IHostBuilder CreateHostBuilder(string[] args)
-    {
-        var rabbitMqConfig = GetConfigurationSection<RabbitMqHostSettings>();
-        var connectionStringConfig = GetConfigurationSection<SqlServerConnectionStringComponents>();
-
-        var connectionStringComponents = new SqlServerConnectionStringComponents()
-        {
-            Server = connectionStringConfig[SqlServerConnectionComponentsKeys.Server],
-            Database = connectionStringConfig[SqlServerConnectionComponentsKeys.Database],
-            UserId = connectionStringConfig[SqlServerConnectionComponentsKeys.UserId],
-            Password = connectionStringConfig[SqlServerConnectionComponentsKeys.Password],
-        };
-
-        var builder = 
-        Host.CreateDefaultBuilder(args)
-            .ConfigureServices((context, services) =>
+        config.Host(
+            host: rabbitMqConfig.Host,
+            virtualHost: rabbitMqConfig.VirtualHost,
+            hostSettings =>
             {
-                services.AddDbContext<RestaurantBookingDbContext>(options =>
-                {
-                    options.UseSqlServer(connectionStringComponents.Combine());
-                });
-
-                services.AddMassTransit(x =>
-                {
-                    x.AddConsumer<BookingRequestedConsumer>().Endpoint(config => config.Temporary = true);
-                    x.AddConsumer<BookingApprovedConsumer>().Endpoint(config => config.Temporary = true);
-                    x.AddConsumer<BookingFaultedConsumer>().Endpoint(config => config.Temporary = true);
-
-                    x.AddSagaStateMachine<BookingStateMachine, BookingState>()
-                            .Endpoint(e => e.Temporary = true)
-                            .InMemoryRepository();
-
-                    x.AddDelayedMessageScheduler();
-
-                    x.UsingRabbitMq((context, config) =>
-                    {
-                        config.Host(
-                            host: rabbitMqConfig[RabbitMqHostSettingsKeys.Host],
-                            virtualHost: rabbitMqConfig[RabbitMqHostSettingsKeys.VirtualHost],
-                            hostSettings =>
-                            {
-                                hostSettings.Username(rabbitMqConfig[RabbitMqHostSettingsKeys.User]);
-                                hostSettings.Password(rabbitMqConfig[RabbitMqHostSettingsKeys.Password]);
-                            });
-
-                        config.UseScheduledRedelivery(r => r.Intervals(TimeSpan.FromMinutes(10),
-                                                                       TimeSpan.FromMinutes(20),
-                                                                       TimeSpan.FromMinutes(30)));
-
-                        config.UseMessageRetry(r => r.Incremental(3, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(3)));
-
-                        config.UseDelayedMessageScheduler();
-                        config.UseInMemoryOutbox();
-                        config.ConfigureEndpoints(context);
-                    });
-                });
-
-                services.AddSingleton<Restaurant>();
-                services.AddTransient<BookingState>();
-                services.AddTransient<BookingStateMachine>();
-                services.AddScoped<IProcessedMessagesRepository, ProcessedMessagesRepository>();
-
-                services.AddHostedService<WorkerBackgroundService>();
+                hostSettings.Username(rabbitMqConfig.User);
+                hostSettings.Password(rabbitMqConfig.Password);
             });
 
-        return builder;
-    }
+        config.UseScheduledRedelivery(r => r.Intervals(TimeSpan.FromMinutes(10),
+                                                       TimeSpan.FromMinutes(20),
+                                                       TimeSpan.FromMinutes(30)));
 
-    private static IConfigurationRoot? GetConfigurationSection<T>() where T : class
-        => new ConfigurationBuilder()
-                .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
-                .AddJsonFile("appsettings.json")
-                .AddUserSecrets<T>()
-                .Build();
-}
+        config.UseMessageRetry(r => r.Incremental(3, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(3)));
+
+        config.UseDelayedMessageScheduler();
+        config.UseInMemoryOutbox();
+        config.ConfigureEndpoints(context);
+    });
+}));
+
+builder.Services.AddSingleton<Restaurant.Booking.Restaurant>();
+builder.Services.AddTransient<BookingState>();
+builder.Services.AddTransient<BookingStateMachine>();
+builder.Services.AddScoped<IProcessedMessagesRepository, ProcessedMessagesRepository>();
+builder.Services.AddHostedService<WorkerBackgroundService>();
+
+var app = builder.Build();
+app.Run();

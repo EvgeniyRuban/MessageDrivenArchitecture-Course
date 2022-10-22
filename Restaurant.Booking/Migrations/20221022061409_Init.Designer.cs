@@ -12,7 +12,7 @@ using Restaurant.Booking;
 namespace Restaurant.Booking.Migrations
 {
     [DbContext(typeof(RestaurantBookingDbContext))]
-    [Migration("20221020134905_Init")]
+    [Migration("20221022061409_Init")]
     partial class Init
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
