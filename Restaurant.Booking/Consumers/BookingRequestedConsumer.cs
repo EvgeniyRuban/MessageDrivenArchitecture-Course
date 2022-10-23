@@ -9,7 +9,7 @@ internal sealed class BookingRequestedConsumer : IConsumer<IBookingRequested>
     private readonly IServiceScopeFactory _serviceScopeFactory;
     private readonly ILogger _logger;
 
-    public BookingRequestedConsumer(Restaurant restaurant, 
+    public BookingRequestedConsumer(Restaurant restaurant,
                                     IServiceScopeFactory serviceScopeFactory,
                                     ILogger<BookingRequestedConsumer> logger)
     {
@@ -46,7 +46,7 @@ internal sealed class BookingRequestedConsumer : IConsumer<IBookingRequested>
 
         if (bookedTableId is not null)
         {
-            await context.Publish<ITableBooked>(new TableBooked(context.Message.OrderId, 
+            await context.Publish<ITableBooked>(new TableBooked(context.Message.OrderId,
                                                                 context.Message.ClientId,
                                                                 (Guid)bookedTableId,
                                                                 context.Message.CreationDate,
@@ -54,10 +54,10 @@ internal sealed class BookingRequestedConsumer : IConsumer<IBookingRequested>
         }
 
         string answer = bookedTableId is null
-            ? "неудалось найти подходящий столик."
-            : $"для вас подобран столик.";
+            ? "no suitable table."
+            : $"table picked up.";
 
-        Console.WriteLine($"[Order: {context.Message.OrderId}] - {answer}");
+        _logger.LogInformation("[Order: {oredrId}] - " + answer, context.Message.OrderId);
     }
 
     public async Task ScheduleProcessedMessageRemoving(ProcessedMessage message, TimeSpan deleteAfter)

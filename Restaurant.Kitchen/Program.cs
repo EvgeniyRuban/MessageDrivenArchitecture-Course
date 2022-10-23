@@ -1,83 +1,14 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Configuration;
-using MassTransit;
-using MassTransit.Audit;
 using Serilog;
-using Restaurant.Kitchen.Consumers;
 
 namespace Restaurant.Kitchen;
 
 public class Program
 {
-    private static IConfiguration Configuration { get; set; }
-
-    public static void Main(string[] args)
-    {
-        Configuration = BuildConfiguration();
-
-        Console.OutputEncoding = System.Text.Encoding.UTF8;
-        Console.Title = Configuration.GetSection(nameof(AppSettings)).Get<AppSettings>().ConsoleTitle;
-
-        CreateHostBuilder(args).Build().Run();
-    }
-
+    public static void Main(string[] args) => CreateHostBuilder(args).Build().Run();
     private static IHostBuilder CreateHostBuilder(string[] args)
-    {
-        var rabbitMqConfig = Configuration.GetSection(nameof(RabbitMqSettings)).Get<RabbitMqSettings>();
-
-        var builder =
-        Host.CreateDefaultBuilder(args)
-            .UseSerilog((context, services, config) =>
-            {
-                config.ReadFrom.ConfigurationSection(Configuration.GetSection(nameof(Serilog)));
-            })
-            .ConfigureServices((hostContext, services) =>
-            {
-                services.AddMassTransit(x =>
-                {
-                    x.AddSingleton<IMessageAuditStore, AuditStore>();
-                    var auditStore = services.BuildServiceProvider().GetService<IMessageAuditStore>();
-
-                    x.AddConsumer<KitchenBookingRequestedConsumer>().Endpoint(cfg => cfg.Temporary = true);
-
-                    x.AddDelayedMessageScheduler();
-
-                    x.UsingRabbitMq((context, config) =>
-                    {
-                        config.Host(host: rabbitMqConfig.Host,
-                                    virtualHost: rabbitMqConfig.VirtualHost,
-                                    hostSettings =>
-                                    {
-                                        hostSettings.Username(rabbitMqConfig.User);
-                                        hostSettings.Password(rabbitMqConfig.Password);
-                                    });
-
-                        config.UseScheduledRedelivery(r => r.Intervals(TimeSpan.FromMinutes(10),
-                                                                       TimeSpan.FromMinutes(20),
-                                                                       TimeSpan.FromMinutes(30)));
-
-                        config.UseMessageRetry(r => r.Incremental(3, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(3)));
-
-                        config.UseDelayedMessageScheduler();
-                        config.UseInMemoryOutbox();
-                        config.ConfigureEndpoints(context);
-
-                        config.ConnectSendAuditObservers(auditStore);
-                        config.ConnectConsumeAuditObserver(auditStore);
-                    });
-                });
-
-                services.AddSingleton<Kitchen>();
-            });
-
-        return builder;
-    }
-
-    private static IConfiguration BuildConfiguration()
-        => new ConfigurationBuilder()
-            .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
-            .AddJsonFile("appsettings.json")
-            .AddUserSecrets<Program>()
-            .Build();
+        => Host.CreateDefaultBuilder(args)
+            .UseSerilog()
+            .ConfigureWebHostDefaults(webBuilder => webBuilder.UseStartup<Startup>());
 }

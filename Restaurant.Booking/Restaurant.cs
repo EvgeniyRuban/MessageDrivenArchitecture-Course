@@ -6,7 +6,7 @@ internal sealed class Restaurant
 {
     private readonly ConcurrentDictionary<Guid, Table> _tables;
     private readonly TimeSpan _syncOperationDelay = TimeSpan.FromSeconds(5);
-    private readonly object _lock = new ();
+    private readonly object _lock = new();
 
     public Restaurant()
     {
@@ -166,8 +166,8 @@ internal sealed class Restaurant
         {
             var id = Guid.NewGuid();
             tables.TryAdd(
-                id, 
-                new (id, (int)arr[rnd.Next(arr.Length)]));
+                id,
+                new(id, (int)arr[rnd.Next(arr.Length)]));
         }
 
         return tables;

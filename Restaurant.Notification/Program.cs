@@ -1,9 +1,9 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using MassTransit;
+using MassTransit.Audit;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using MassTransit;
 using Restaurant.Notification.Consumers;
-using MassTransit.Audit;
 using Serilog;
 
 namespace Restaurant.Notification;
@@ -26,7 +26,7 @@ internal class Program
     {
         var rabbitMqConfig = Configuration.GetSection(nameof(RabbitMqSettings)).Get<RabbitMqSettings>();
 
-        var builder = 
+        var builder =
         Host.CreateDefaultBuilder(args)
             .UseSerilog((context, services, config) =>
             {

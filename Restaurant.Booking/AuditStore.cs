@@ -1,5 +1,5 @@
-﻿using System.Text.Json;
-using MassTransit.Audit;
+﻿using MassTransit.Audit;
+using System.Text.Json;
 
 namespace Restaurant.Booking;
 

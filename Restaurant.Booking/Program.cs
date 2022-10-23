@@ -1,26 +1,28 @@
-using Microsoft.EntityFrameworkCore;
 using MassTransit;
 using MassTransit.Audit;
-using Serilog;
+using Microsoft.EntityFrameworkCore;
+using Prometheus;
 using Restaurant.Booking;
 using Restaurant.Booking.Consumers;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
-
-Console.OutputEncoding = System.Text.Encoding.UTF8; 
+Console.OutputEncoding = System.Text.Encoding.UTF8;
 Console.Title = builder.Configuration.GetSection(nameof(AppSettings)).Get<AppSettings>().ConsoleTitle;
+
+builder.Services.AddControllers();
 
 builder.Services.AddDbContext<RestaurantBookingDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString(ConnectionStringsKeys.SqlServer)));
 
-builder.Host.UseSerilog((context, services) =>
+builder.Host.UseSerilog((context, config) =>
 {
-    services.ReadFrom.Configuration(context.Configuration);
+    config.ReadFrom.Configuration(context.Configuration)
+        .WriteTo.File($"log/log-{DateTime.UtcNow.ToString("dd.MM.yyyy")}.txt");
 });
 
-builder.Services.AddMassTransit((x =>
+builder.Services.AddMassTransit(x =>
 {
     x.AddSingleton<IMessageAuditStore, AuditStore>();
     var auditStore = builder.Services.BuildServiceProvider().GetService<IMessageAuditStore>();
@@ -48,6 +50,8 @@ builder.Services.AddMassTransit((x =>
                 hostSettings.Password(rabbitMqConfig.Password);
             });
 
+        config.UsePrometheusMetrics(serviceName: "booking_services");
+
         config.UseScheduledRedelivery(r => r.Intervals(TimeSpan.FromMinutes(10),
                                                        TimeSpan.FromMinutes(20),
                                                        TimeSpan.FromMinutes(30)));
@@ -61,7 +65,7 @@ builder.Services.AddMassTransit((x =>
         config.ConnectSendAuditObservers(auditStore);
         config.ConnectConsumeAuditObserver(auditStore);
     });
-}));
+});
 
 builder.Services.AddSingleton<Restaurant.Booking.Restaurant>();
 builder.Services.AddTransient<BookingState>();
@@ -71,4 +75,13 @@ builder.Services.AddScoped<IProcessedMessagesRepository, ProcessedMessagesReposi
 builder.Services.AddHostedService<WorkerBackgroundService>();
 
 var app = builder.Build();
+
+app.UseRouting();
+
+app.UseEndpoints(endpoints =>
+{
+    endpoints.MapMetrics();
+    endpoints.MapControllers();
+});
+
 app.Run();
