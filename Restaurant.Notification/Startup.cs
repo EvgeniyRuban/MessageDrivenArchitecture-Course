@@ -5,10 +5,10 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Prometheus;
-using Restaurant.Kitchen.Consumers;
+using Restaurant.Notification.Consumers;
 using Serilog;
 
-namespace Restaurant.Kitchen;
+namespace Restaurant.Notification;
 
 public sealed class Startup
 {
@@ -30,21 +30,22 @@ public sealed class Startup
 
         services.AddMassTransit(x =>
         {
-            x.AddConsumer<KitchenBookingRequestedConsumer>().Endpoint(cfg => cfg.Temporary = true);
+            x.AddSingleton<IMessageAuditStore, AuditStore>();
+            var auditStore = services.BuildServiceProvider().GetService<IMessageAuditStore>();
+            var rabbitMqConfig = Configuration.GetSection(nameof(RabbitMqSettings)).Get<RabbitMqSettings>();
 
-            x.AddDelayedMessageScheduler();
+            x.AddConsumer<NotifyConsumer>().Endpoint(cfg => cfg.Temporary = true);
 
             x.UsingRabbitMq((context, config) =>
             {
-                var rabbitMqConfig = Configuration.GetSection(nameof(RabbitMqSettings)).Get<RabbitMqSettings>();
-
-                config.Host(host: rabbitMqConfig.Host,
-                            virtualHost: rabbitMqConfig.VirtualHost,
-                            hostSettings =>
-                            {
-                                hostSettings.Username(rabbitMqConfig.User);
-                                hostSettings.Password(rabbitMqConfig.Password);
-                            });
+                config.Host(
+                    host: rabbitMqConfig.Host,
+                    virtualHost: rabbitMqConfig.VirtualHost,
+                    hostSettings =>
+                    {
+                        hostSettings.Username(rabbitMqConfig.User);
+                        hostSettings.Password(rabbitMqConfig.Password);
+                    });
 
                 config.UseScheduledRedelivery(r => r.Intervals(TimeSpan.FromMinutes(10),
                                                                TimeSpan.FromMinutes(20),
@@ -52,14 +53,11 @@ public sealed class Startup
 
                 config.UseMessageRetry(r => r.Incremental(3, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(3)));
 
-                config.UseDelayedMessageScheduler();
+                config.UsePrometheusMetrics(serviceName: "mt_publish_total");
+
                 config.UseInMemoryOutbox();
                 config.ConfigureEndpoints(context);
 
-                config.UsePrometheusMetrics(serviceName: "mt_publish_total");
-
-                x.AddSingleton<IMessageAuditStore, AuditStore>();
-                var auditStore = services.BuildServiceProvider().GetService<IMessageAuditStore>();
                 config.ConnectSendAuditObservers(auditStore);
                 config.ConnectConsumeAuditObserver(auditStore);
             });
@@ -72,11 +70,11 @@ public sealed class Startup
             options.StopTimeout = TimeSpan.FromMinutes(1);
         });
 
-        services.AddSingleton<Kitchen>();
+        services.AddTransient<Notifier>();
     }
     public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
     {
-        app.UseRouting();;
+        app.UseRouting();
 
         app.UseEndpoints(endpoints =>
         {
