@@ -63,8 +63,7 @@ public sealed class BookingStateMachine : MassTransitStateMachine<BookingState>
                     (INotify)new Notify(context.Instance.OrderId,
                                         context.Instance.ClientId,
                                         "стол успешно забронирован"))
-                .Publish(context =>
-                    (IBookingApproved)new BookingApproved(context.Instance.OrderId, context.Instance.ClientId))
+                .Publish(context => (IBookingApproved)new BookingApproved(context.Instance.OrderId, context.Instance.ClientId))
                 .Schedule(GuestArrivalExpired,
                     context => new GuestArrivalExpired(context.Instance),
                     context => context.Instance.GuestArrivalVia)

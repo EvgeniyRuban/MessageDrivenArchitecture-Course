@@ -28,8 +28,8 @@ builder.Services.AddMassTransit(x =>
     var auditStore = builder.Services.BuildServiceProvider().GetService<IMessageAuditStore>();
 
     x.AddConsumer<BookingRequestedConsumer>().Endpoint(config => config.Temporary = true);
-    x.AddConsumer<BookingApprovedConsumer>().Endpoint(config => config.Temporary = true);
     x.AddConsumer<BookingFaultedConsumer>().Endpoint(config => config.Temporary = true);
+    x.AddConsumer<BookingApprovedConsumer>().Endpoint(config => config.Temporary = true);
 
     x.AddSagaStateMachine<BookingStateMachine, BookingState>()
             .Endpoint(e => e.Temporary = true)

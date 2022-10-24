@@ -32,11 +32,14 @@ public sealed class WorkerBackgroundService : BackgroundService
     {
         do
         {
+            int numberOfSeats = (int)NumberOfSeats.Min;
             var arrivalVia = TimeSpan.FromSeconds(10);
-            _logger.LogInformation($"Booking request. Arrival: {DateTime.UtcNow + arrivalVia}.");
+            _logger.LogInformation("Booking request. Arrival: {arrival}. NumberOfSeats: {seats}", 
+                DateTime.UtcNow + arrivalVia, numberOfSeats);
 
             var bookingRequested = new BookingRequested(NewId.NextGuid(), 
-                                                        NewId.NextGuid(), 
+                                                        NewId.NextGuid(),
+                                                        numberOfSeats,
                                                         DateTime.UtcNow, 
                                                         arrivalVia);
 

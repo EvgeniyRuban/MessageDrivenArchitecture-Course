@@ -2,7 +2,7 @@
 
 namespace Restaurant.Booking;
 
-internal sealed class Restaurant
+public sealed class Restaurant
 {
     private readonly ConcurrentDictionary<Guid, Table> _tables;
     private readonly TimeSpan _syncOperationDelay = TimeSpan.FromSeconds(5);
@@ -10,7 +10,7 @@ internal sealed class Restaurant
 
     public Restaurant()
     {
-        _tables = GetRandomTables(10);
+        _tables = GetTables(10);
     }
 
     /// <summary>
@@ -147,27 +147,14 @@ internal sealed class Restaurant
             }
         });
     }
-    private ConcurrentDictionary<Guid, Table> GetRandomTables(int count)
+    private ConcurrentDictionary<Guid, Table> GetTables(int count)
     {
         var tables = new ConcurrentDictionary<Guid, Table>();
-        var rnd = new Random();
-        NumberOfSeats[] arr =
-        {
-                NumberOfSeats.Single,
-                NumberOfSeats.Double,
-                NumberOfSeats.Four,
-                NumberOfSeats.Six,
-                NumberOfSeats.Eight,
-                NumberOfSeats.Ten,
-                NumberOfSeats.Twelve,
-        };
 
         for (int i = 0; i < count; i++)
         {
             var id = Guid.NewGuid();
-            tables.TryAdd(
-                id,
-                new(id, (int)arr[rnd.Next(arr.Length)]));
+            tables.TryAdd(id, new Table (id, (int)NumberOfSeats.Max));
         }
 
         return tables;

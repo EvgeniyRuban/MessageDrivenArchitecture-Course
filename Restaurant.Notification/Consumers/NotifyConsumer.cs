@@ -17,7 +17,6 @@ public sealed class NotifyConsumer : IConsumer<INotify>
     public Task Consume(ConsumeContext<INotify> context)
     {
         _notifier.Notify(context.Message.OrderId, context.Message.Message);
-
-        return context.ConsumeCompleted;
+        return Task.CompletedTask;
     }
 }

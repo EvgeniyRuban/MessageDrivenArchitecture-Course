@@ -2,7 +2,7 @@
 
 namespace Restaurant.Booking;
 
-internal class ProcessedMessagesRepository : IProcessedMessagesRepository
+public class ProcessedMessagesRepository : IProcessedMessagesRepository
 {
     private readonly RestaurantBookingDbContext _dbContext;
 

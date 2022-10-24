@@ -4,7 +4,7 @@ using Restaurant.Messaging;
 
 namespace Restaurant.Kitchen.Consumers;
 
-internal sealed class KitchenBookingRequestedConsumer : IConsumer<IBookingRequested>
+public sealed class KitchenBookingRequestedConsumer : IConsumer<IBookingRequested>
 {
     private readonly Kitchen _kitchen;
     private readonly ILogger _logger;

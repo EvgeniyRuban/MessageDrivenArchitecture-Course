@@ -9,4 +9,6 @@ public enum NumberOfSeats
     Eight = 8,
     Ten = 10,
     Twelve = 12,
+    Min = Single,
+    Max = Twelve,
 }
