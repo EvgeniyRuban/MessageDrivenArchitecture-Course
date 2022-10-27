@@ -13,6 +13,8 @@ Console.Title = builder.Configuration.GetSection(nameof(AppSettings)).Get<AppSet
 
 builder.Services.AddControllers();
 
+builder.Services.AddSwaggerGen();
+
 builder.Services.AddDbContext<RestaurantBookingDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString(ConnectionStringsKeys.SqlServer)));
 
@@ -72,9 +74,13 @@ builder.Services.AddTransient<BookingState>();
 builder.Services.AddTransient<BookingStateMachine>();
 builder.Services.AddScoped<IProcessedMessagesRepository, ProcessedMessagesRepository>();
 
-builder.Services.AddHostedService<WorkerBackgroundService>();
-
 var app = builder.Build();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 
 app.UseRouting();
 
