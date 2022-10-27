@@ -13,15 +13,14 @@ using System.Threading.Tasks;
 
 namespace Restaurant.Tests;
 
-public class ConsumerTests
+public class ConsumersTests
 {
-    private ServiceProvider _provider;
-    private ITestHarness _harness;
+    private ITestHarness _harness = null!;
 
     [OneTimeSetUp]
     public async Task Init()
     {
-        _provider = new ServiceCollection()
+        var serviceProvider = new ServiceCollection()
             .AddMassTransitTestHarness(config =>
             {
                 config.AddConsumer<BookingRequestedConsumer>();
@@ -35,7 +34,7 @@ public class ConsumerTests
             .AddSingleton<Notifier>()
             .BuildServiceProvider(true);
 
-        _harness = _provider.GetTestHarness();
+        _harness = serviceProvider.GetTestHarness();
 
         await _harness.Start();
     }
@@ -44,7 +43,6 @@ public class ConsumerTests
     public async Task TearDown()
     {
         await _harness.Stop();
-        await _provider.DisposeAsync();
     }
 
     [Test]
@@ -93,7 +91,7 @@ public class ConsumerTests
 
         await _harness.Bus.Publish<IBookingApproved>(bookingApproved);
 
-        Assert.IsTrue(await _harness.Published.Any<IGuestArrived>(x 
+        Assert.IsTrue(await _harness.Published.Any<IGuestArrived>(x
             => x.Context.Message.OrderId == bookingApproved.OrderId));
     }
 
