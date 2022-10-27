@@ -11,6 +11,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tasks", "tasks", "{3589FE9D
 		tasks\task-4.txt = tasks\task-4.txt
 		tasks\task-5.txt = tasks\task-5.txt
 		tasks\task-6.txt = tasks\task-6.txt
+		tasks\task-7.txt = tasks\task-7.txt
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Restaurant.Messaging", "Restaurant.Messaging\Restaurant.Messaging.csproj", "{F94DCBE1-162B-40F4-A137-E2A2082CD346}"
@@ -19,7 +20,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Restaurant.Notification", "
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Restaurant.Kitchen", "Restaurant.Kitchen\Restaurant.Kitchen.csproj", "{F2667277-D5DC-4AAF-9899-75C0721C759F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Restaurant.Booking", "Restaurant.Booking\Restaurant.Booking.csproj", "{137DC38F-92B3-4F8E-AB80-864EB02C8D72}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Restaurant.Booking", "Restaurant.Booking\Restaurant.Booking.csproj", "{137DC38F-92B3-4F8E-AB80-864EB02C8D72}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Restaurant.Tests", "Restaurant.Tests\Restaurant.Tests.csproj", "{F530445E-FDAB-4C89-8FE5-D5F22BF2CB3B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -43,6 +46,10 @@ Global
 		{137DC38F-92B3-4F8E-AB80-864EB02C8D72}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{137DC38F-92B3-4F8E-AB80-864EB02C8D72}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{137DC38F-92B3-4F8E-AB80-864EB02C8D72}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F530445E-FDAB-4C89-8FE5-D5F22BF2CB3B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F530445E-FDAB-4C89-8FE5-D5F22BF2CB3B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F530445E-FDAB-4C89-8FE5-D5F22BF2CB3B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F530445E-FDAB-4C89-8FE5-D5F22BF2CB3B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

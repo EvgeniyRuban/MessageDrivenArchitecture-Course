@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace Restaurant.Booking;
 
 [Table("ProcessedMessages")]
-internal sealed class ProcessedMessage
+public sealed class ProcessedMessage
 {
     [Key, Required]
     public Guid OrderId { get; set; }

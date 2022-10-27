@@ -1,5 +1,4 @@
-﻿using Microsoft.Extensions.Hosting;
-using MassTransit;
+﻿using MassTransit;
 using Restaurant.Messaging;
 
 namespace Restaurant.Booking;
@@ -7,11 +6,15 @@ namespace Restaurant.Booking;
 public sealed class WorkerBackgroundService : BackgroundService
 {
     private readonly IBus _bus;
+    private readonly ILogger _logger;
 
-    public WorkerBackgroundService(IBus bus)
+    public WorkerBackgroundService(IBus bus, ILogger<WorkerBackgroundService> logger)
     {
         ArgumentNullException.ThrowIfNull(bus, nameof(bus));
+        ArgumentNullException.ThrowIfNull(logger, nameof(logger));
+
         _bus = bus;
+        _logger = logger;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -29,11 +32,14 @@ public sealed class WorkerBackgroundService : BackgroundService
     {
         do
         {
+            int numberOfSeats = (int)NumberOfSeats.Min;
             var arrivalVia = TimeSpan.FromSeconds(10);
-            Console.WriteLine($"\nЗапрос на бронь. Прибытие через: {arrivalVia}.");
+            _logger.LogInformation("Booking request. Arrival: {arrival}. NumberOfSeats: {seats}", 
+                DateTime.UtcNow + arrivalVia, numberOfSeats);
 
             var bookingRequested = new BookingRequested(NewId.NextGuid(), 
-                                                        NewId.NextGuid(), 
+                                                        NewId.NextGuid(),
+                                                        numberOfSeats,
                                                         DateTime.UtcNow, 
                                                         arrivalVia);
 

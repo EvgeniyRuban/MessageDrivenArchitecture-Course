@@ -2,7 +2,7 @@
 
 namespace Restaurant.Booking;
 
-internal class RestaurantBookingDbContext : DbContext
+public class RestaurantBookingDbContext : DbContext
 {
     public RestaurantBookingDbContext(DbContextOptions options) : base(options)
     {

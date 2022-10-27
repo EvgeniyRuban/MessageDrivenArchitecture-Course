@@ -3,7 +3,7 @@ using Restaurant.Messaging;
 
 namespace Restaurant.Kitchen;
 
-internal sealed class Kitchen
+public sealed class Kitchen
 {
     private readonly IReadOnlyList<Dish> _dishes = new List<Dish>()
     {
